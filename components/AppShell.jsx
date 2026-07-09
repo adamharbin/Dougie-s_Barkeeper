@@ -1,31 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/lib/useAuth";
+import { loadAll } from "@/lib/db";
+import { isStalePrice, estimatedExpiration, daysUntil } from "@/lib/costing";
 import LoginForm from "./LoginForm";
 import Nav from "./Nav";
+import Dashboard from "./Dashboard";
+import { SectionHead, EmptyState } from "./ui";
 
 function ComingSoon({ title, desc }) {
   return (
     <div>
-      <div className="bk-section-head">
-        <div>
-          <h2>{title}</h2>
-          <p>{desc}</p>
-        </div>
-      </div>
+      <SectionHead title={title} desc={desc} />
       <div className="bk-card">
-        <div className="bk-empty">
-          <div className="bk-empty-text">This module is next up on the leash.</div>
-          <div className="bk-empty-sub">Foundation (auth, nav, schema) is in for review — module build-out comes next.</div>
-        </div>
+        <EmptyState
+          text="This module is next up on the leash."
+          sub="Foundation (auth, nav, schema) is in for review — module build-out comes next."
+        />
       </div>
     </div>
   );
 }
 
 const TAB_CONTENT = {
-  dashboard: { title: "Dashboard", desc: "Where the whole bar's numbers land, at a glance." },
   inventory: { title: "Inventory", desc: "Food, bar & shared items — priced from real purchase history." },
   recipes: { title: "Recipes", desc: "Costed off live inventory prices — food and bar, same math." },
   vendors: { title: "Vendors", desc: "Who supplies what, and when it's due." },
@@ -33,8 +31,37 @@ const TAB_CONTENT = {
 };
 
 export default function AppShell() {
-  const { user, loading, configured } = useAuth();
+  const { user, loading: authLoading, configured } = useAuth();
   const [tab, setTab] = useState("dashboard");
+
+  const [data, setData] = useState(null);
+  const [dataLoading, setDataLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      try {
+        const next = await loadAll();
+        setData(next);
+        setLoadError("");
+      } catch (e) {
+        console.error(e);
+        setLoadError("Couldn't load data — check your connection and try refreshing.");
+      } finally {
+        setDataLoading(false);
+      }
+    })();
+  }, [user]);
+
+  const attention = useMemo(() => {
+    if (!data) return { stale: [], expiring: [] };
+    const stale = data.items.filter((i) => isStalePrice(i.id, data.prices));
+    const expiring = data.items
+      .map((i) => ({ item: i, exp: estimatedExpiration(i, data.prices) }))
+      .filter((x) => x.exp && daysUntil(x.exp) <= 3 && daysUntil(x.exp) >= 0);
+    return { stale, expiring };
+  }, [data]);
 
   if (!configured) {
     return (
@@ -51,7 +78,7 @@ export default function AppShell() {
     );
   }
 
-  if (loading) {
+  if (authLoading) {
     return <div className="bk-loading">Fetching the bowl of data…</div>;
   }
 
@@ -59,13 +86,25 @@ export default function AppShell() {
     return <LoginForm />;
   }
 
-  const content = TAB_CONTENT[tab];
-
   return (
     <div className="bk-app">
       <Nav tab={tab} onTabChange={setTab} />
       <main className="bk-main">
-        <ComingSoon title={content.title} desc={content.desc} />
+        {loadError && <div className="bk-save-error">{loadError}</div>}
+        {dataLoading || !data ? (
+          <div className="bk-loading">Fetching the bowl of data…</div>
+        ) : tab === "dashboard" ? (
+          <Dashboard
+            items={data.items}
+            prices={data.prices}
+            recipes={data.recipes}
+            settings={data.settings}
+            attention={attention}
+            onGo={setTab}
+          />
+        ) : (
+          <ComingSoon title={TAB_CONTENT[tab].title} desc={TAB_CONTENT[tab].desc} />
+        )}
       </main>
     </div>
   );
