@@ -1,0 +1,192 @@
+-- BarKeeper — Phase 1 schema
+-- Real Supabase Auth (email/password) with two roles: admin, manager.
+-- Labor cost is computed per recipe from labor_minutes x hourly rate — no
+-- labor_entries / sales_entries tables (that period-labor model is retired
+-- per Build Prompt v4).
+
+-- ---------------------------------------------------------------------------
+-- profiles (role lives here, one row per auth.users row)
+-- ---------------------------------------------------------------------------
+
+create table profiles (
+  id uuid primary key references auth.users(id) on delete cascade,
+  full_name text default '',
+  role text not null default 'manager' check (role in ('admin', 'manager')),
+  created_at timestamptz default now()
+);
+
+-- Auto-create a profile row whenever someone signs up. The owner's email is
+-- promoted to admin automatically; everyone else starts as a manager — bump
+-- them to admin manually in the table editor if that ever changes.
+create function public.handle_new_user() returns trigger
+language plpgsql security definer set search_path = public
+as $$
+begin
+  insert into public.profiles (id, full_name, role)
+  values (
+    new.id,
+    coalesce(new.raw_user_meta_data->>'full_name', ''),
+    case when new.email = 'adam@pfourgroup.com' then 'admin' else 'manager' end
+  );
+  return new;
+end;
+$$;
+
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function public.handle_new_user();
+
+-- Security-definer helper so RLS policies on other tables can check the
+-- caller's role without re-triggering RLS on profiles itself.
+create function public.current_role() returns text
+language sql security definer stable set search_path = public
+as $$
+  select role from public.profiles where id = auth.uid();
+$$;
+
+create function public.is_admin() returns boolean
+language sql security definer stable set search_path = public
+as $$
+  select coalesce(public.current_role() = 'admin', false);
+$$;
+
+-- ---------------------------------------------------------------------------
+-- core tables
+-- ---------------------------------------------------------------------------
+
+create table vendors (
+  id uuid primary key default gen_random_uuid(),
+  name text not null default '',
+  contact_name text default '',
+  contact_method text default '', -- phone/email/"order portal only"
+  order_deadline text default '', -- day + time, free text
+  delivery_days text default '',
+  supplies_notes text default '', -- free text or tags matching inventory categories
+  created_at timestamptz default now()
+);
+
+create table inventory_items (
+  id uuid primary key default gen_random_uuid(),
+  name text not null default '',
+  category_tag text not null default 'Food' check (category_tag in ('Food', 'Bar', 'Shared')),
+  unit text default '',
+  par_level numeric,
+  shelf_life_days numeric, -- null = no expiry (e.g. well vodka)
+  created_at timestamptz default now()
+);
+
+create table inventory_prices (
+  id uuid primary key default gen_random_uuid(),
+  item_id uuid references inventory_items(id) on delete cascade,
+  vendor_id uuid references vendors(id) on delete set null,
+  quantity numeric,
+  unit text,
+  cost numeric,
+  purchase_date date default current_date,
+  checked_in_date date default current_date,
+  source text default 'manual' check (source in ('manual', 'upload')),
+  created_at timestamptz default now()
+);
+
+create table recipes (
+  id uuid primary key default gen_random_uuid(),
+  name text not null default 'New recipe',
+  category_tag text not null default 'Food' check (category_tag in ('Food', 'Bar')),
+  yield numeric,
+  menu_price numeric,
+  labor_minutes numeric, -- null/0 = "no time set", never estimated
+  prep_notes text default '',
+  created_at timestamptz default now()
+);
+
+create table recipe_ingredients (
+  id uuid primary key default gen_random_uuid(),
+  recipe_id uuid references recipes(id) on delete cascade,
+  item_id uuid references inventory_items(id),
+  quantity numeric,
+  unit text,
+  created_at timestamptz default now()
+);
+
+create table goal_settings (
+  id int primary key default 1,
+  target_food_cost_pct numeric default 30,
+  target_bar_cost_pct numeric default 22,
+  target_prime_cost_pct numeric default 55,
+  food_hourly_rate numeric default 15,
+  bar_hourly_rate numeric default 15,
+  updated_at timestamptz default now(),
+  constraint single_row check (id = 1)
+);
+insert into goal_settings (id) values (1);
+
+create table uploads (
+  id uuid primary key default gen_random_uuid(),
+  file_type text not null check (file_type in ('invoice', 'recipe')),
+  original_filename text default '',
+  parsed_status text default 'pending' check (parsed_status in ('pending', 'confirmed', 'discarded')),
+  uploaded_by uuid references profiles(id),
+  created_at timestamptz default now()
+);
+
+-- ---------------------------------------------------------------------------
+-- RLS — matches the permission matrix in Build Prompt v4 exactly
+-- ---------------------------------------------------------------------------
+
+alter table profiles enable row level security;
+alter table vendors enable row level security;
+alter table inventory_items enable row level security;
+alter table inventory_prices enable row level security;
+alter table recipes enable row level security;
+alter table recipe_ingredients enable row level security;
+alter table goal_settings enable row level security;
+alter table uploads enable row level security;
+
+-- profiles: everyone can read their own row; admins can read/update everyone
+-- (foundation for a future "manage users" screen — not built yet).
+create policy "read own profile" on profiles for select using (auth.uid() = id or public.is_admin());
+create policy "admin manage profiles" on profiles for update using (public.is_admin());
+
+-- vendors: view = any signed-in user. Add/edit = admin + manager. Delete = admin only.
+create policy "vendors select" on vendors for select using (auth.uid() is not null);
+create policy "vendors insert" on vendors for insert with check (auth.uid() is not null);
+create policy "vendors update" on vendors for update using (auth.uid() is not null);
+create policy "vendors delete" on vendors for delete using (public.is_admin());
+
+-- inventory_items: view = any signed-in user. Add/edit = admin + manager. Delete = admin only.
+create policy "items select" on inventory_items for select using (auth.uid() is not null);
+create policy "items insert" on inventory_items for insert with check (auth.uid() is not null);
+create policy "items update" on inventory_items for update using (auth.uid() is not null);
+create policy "items delete" on inventory_items for delete using (public.is_admin());
+
+-- inventory_prices (purchase log / invoice lines): view = any signed-in user.
+-- Add = admin + manager (matches "log a purchase" / "upload an invoice").
+-- Edit/delete restricted to admin — correcting a logged purchase isn't in the
+-- matrix, so default to the more conservative admin-only rather than letting
+-- a manager silently rewrite cost history.
+create policy "prices select" on inventory_prices for select using (auth.uid() is not null);
+create policy "prices insert" on inventory_prices for insert with check (auth.uid() is not null);
+create policy "prices update" on inventory_prices for update using (public.is_admin());
+create policy "prices delete" on inventory_prices for delete using (public.is_admin());
+
+-- recipes + recipe_ingredients: view = any signed-in user. All writes = admin only
+-- (managers are read-only on recipes, matching the matrix).
+create policy "recipes select" on recipes for select using (auth.uid() is not null);
+create policy "recipes insert" on recipes for insert with check (public.is_admin());
+create policy "recipes update" on recipes for update using (public.is_admin());
+create policy "recipes delete" on recipes for delete using (public.is_admin());
+
+create policy "recipe_ingredients select" on recipe_ingredients for select using (auth.uid() is not null);
+create policy "recipe_ingredients insert" on recipe_ingredients for insert with check (public.is_admin());
+create policy "recipe_ingredients update" on recipe_ingredients for update using (public.is_admin());
+create policy "recipe_ingredients delete" on recipe_ingredients for delete using (public.is_admin());
+
+-- goal_settings: view = any signed-in user. Edit = admin only.
+create policy "goals select" on goal_settings for select using (auth.uid() is not null);
+create policy "goals update" on goal_settings for update using (public.is_admin());
+
+-- uploads: view + insert = any signed-in user (the target table's own RLS
+-- already enforces who can actually save parsed rows — e.g. only an admin's
+-- parsed recipe upload can insert into recipes).
+create policy "uploads select" on uploads for select using (auth.uid() is not null);
+create policy "uploads insert" on uploads for insert with check (auth.uid() is not null);
