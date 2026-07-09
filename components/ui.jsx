@@ -33,3 +33,26 @@ export function EmptyState({ text, sub }) {
     </div>
   );
 }
+
+export function Modal({ title, onClose, children, wide }) {
+  return (
+    <div className="bk-modal-overlay" onClick={onClose}>
+      <div className={`bk-modal ${wide ? "bk-modal-wide" : ""}`} onClick={(e) => e.stopPropagation()}>
+        <div className="bk-modal-head">
+          <h3>{title}</h3>
+          <button className="bk-x" onClick={onClose}>✕</button>
+        </div>
+        <div className="bk-modal-body">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+export function Field({ label, children }) {
+  return (
+    <label className="bk-field">
+      <span>{label}</span>
+      {children}
+    </label>
+  );
+}

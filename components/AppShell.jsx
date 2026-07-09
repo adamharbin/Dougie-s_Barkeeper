@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useAuth } from "@/lib/useAuth";
 import { loadAll } from "@/lib/db";
 import { isStalePrice, estimatedExpiration, daysUntil } from "@/lib/costing";
 import LoginForm from "./LoginForm";
 import Nav from "./Nav";
 import Dashboard from "./Dashboard";
+import InventoryTab from "./InventoryTab";
 import { SectionHead, EmptyState } from "./ui";
 
 function ComingSoon({ title, desc }) {
@@ -24,7 +25,6 @@ function ComingSoon({ title, desc }) {
 }
 
 const TAB_CONTENT = {
-  inventory: { title: "Inventory", desc: "Food, bar & shared items — priced from real purchase history." },
   recipes: { title: "Recipes", desc: "Costed off live inventory prices — food and bar, same math." },
   vendors: { title: "Vendors", desc: "Who supplies what, and when it's due." },
   settings: { title: "Settings", desc: "Labor rates and goal margins — these drive the color-coding everywhere else." },
@@ -53,6 +53,19 @@ export default function AppShell() {
       }
     })();
   }, [user]);
+
+  // Reload after a mutation (add/edit/delete), called from event handlers only —
+  // never invoked directly inside an effect — so no loading-flash on every save.
+  const refresh = useCallback(async () => {
+    try {
+      const next = await loadAll();
+      setData(next);
+      setLoadError("");
+    } catch (e) {
+      console.error(e);
+      setLoadError("Couldn't reload data — check your connection and try again.");
+    }
+  }, []);
 
   const attention = useMemo(() => {
     if (!data) return { stale: [], expiring: [] };
@@ -102,6 +115,8 @@ export default function AppShell() {
             attention={attention}
             onGo={setTab}
           />
+        ) : tab === "inventory" ? (
+          <InventoryTab items={data.items} prices={data.prices} vendors={data.vendors} onSaved={refresh} />
         ) : (
           <ComingSoon title={TAB_CONTENT[tab].title} desc={TAB_CONTENT[tab].desc} />
         )}
