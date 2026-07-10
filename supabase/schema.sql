@@ -72,6 +72,7 @@ create table inventory_items (
   unit text default '',
   par_level numeric,
   shelf_life_days numeric, -- null = no expiry (e.g. well vodka)
+  on_hand_qty numeric, -- most recent physical count; null = never counted
   created_at timestamptz default now()
 );
 
@@ -131,6 +132,32 @@ create table uploads (
   created_at timestamptz default now()
 );
 
+-- A single dated physical-inventory-count event. total_value is the full
+-- inventory valuation as of count_date: newly-counted items use this
+-- session's quantity, uncounted items carry forward their existing
+-- on_hand_qty — both priced at each item's weighted-avg cost at save time.
+create table inventory_counts (
+  id uuid primary key default gen_random_uuid(),
+  count_date date default current_date,
+  total_value numeric not null default 0,
+  created_by uuid references profiles(id),
+  created_at timestamptz default now()
+);
+
+-- One row per item actually counted in a session (partial counts are fine —
+-- items not touched this session simply have no line here). unit_cost/
+-- line_value are snapshotted at count time so this stays an honest audit
+-- trail even if purchase history is edited later.
+create table inventory_count_lines (
+  id uuid primary key default gen_random_uuid(),
+  count_id uuid references inventory_counts(id) on delete cascade,
+  item_id uuid references inventory_items(id),
+  quantity numeric not null,
+  unit_cost numeric,
+  line_value numeric,
+  created_at timestamptz default now()
+);
+
 -- ---------------------------------------------------------------------------
 -- RLS — matches the permission matrix in Build Prompt v4 exactly
 -- ---------------------------------------------------------------------------
@@ -143,6 +170,8 @@ alter table recipes enable row level security;
 alter table recipe_ingredients enable row level security;
 alter table goal_settings enable row level security;
 alter table uploads enable row level security;
+alter table inventory_counts enable row level security;
+alter table inventory_count_lines enable row level security;
 
 -- profiles: everyone can read their own row; admins can read/update everyone
 -- (foundation for a future "manage users" screen — not built yet).
@@ -192,3 +221,12 @@ create policy "goals update" on goal_settings for update using (public.is_admin(
 -- parsed recipe upload can insert into recipes).
 create policy "uploads select" on uploads for select using (auth.uid() is not null);
 create policy "uploads insert" on uploads for insert with check (auth.uid() is not null);
+
+-- inventory_counts + lines: view + insert = any signed-in user (same level as
+-- logging a purchase). No update/delete — a bad count gets corrected with a
+-- new count, not a rewrite of history.
+create policy "counts select" on inventory_counts for select using (auth.uid() is not null);
+create policy "counts insert" on inventory_counts for insert with check (auth.uid() is not null);
+
+create policy "count_lines select" on inventory_count_lines for select using (auth.uid() is not null);
+create policy "count_lines insert" on inventory_count_lines for insert with check (auth.uid() is not null);

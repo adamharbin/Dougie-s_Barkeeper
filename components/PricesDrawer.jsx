@@ -14,7 +14,7 @@ function blankForm(item) {
     case_quantity: "",
     units_per_case: "1",
     unit: item.unit || "",
-    cost: "",
+    total_cost: "",
   };
 }
 
@@ -25,9 +25,10 @@ export default function PricesDrawer({ item, prices, allPrices, vendors, onClose
   const [error, setError] = useState("");
 
   const totalUnits = (Number(form.case_quantity) || 0) * (Number(form.units_per_case) || 0);
+  const costPerUnit = totalUnits > 0 ? Number(form.total_cost || 0) / totalUnits : null;
 
   async function addEntry() {
-    if (!form.case_quantity || !form.units_per_case || !form.cost) return;
+    if (!form.case_quantity || !form.units_per_case || !form.total_cost || !totalUnits) return;
     setSaving(true);
     setError("");
     try {
@@ -35,6 +36,7 @@ export default function PricesDrawer({ item, prices, allPrices, vendors, onClose
         ...form,
         item_id: item.id,
         quantity: totalUnits,
+        cost: costPerUnit,
         source: "manual",
       });
       await onSaved();
@@ -69,12 +71,12 @@ export default function PricesDrawer({ item, prices, allPrices, vendors, onClose
         <thead>
           <tr>
             <th>Date</th><th>Vendor</th><th>Cases</th><th>Units/case</th><th>Total units</th>
-            <th>Cost/unit</th><th>Checked in</th><th></th>
+            <th>Total cost</th><th>Cost/unit</th><th>Checked in</th><th></th>
           </tr>
         </thead>
         <tbody>
           {prices.length === 0 && (
-            <tr><td colSpan={8}><EmptyState text="No purchases logged yet." /></td></tr>
+            <tr><td colSpan={9}><EmptyState text="No purchases logged yet." /></td></tr>
           )}
           {[...prices].sort((a, b) => new Date(b.purchase_date) - new Date(a.purchase_date)).map((e) => (
             <tr key={e.id}>
@@ -83,6 +85,7 @@ export default function PricesDrawer({ item, prices, allPrices, vendors, onClose
               <td>{e.case_quantity ?? "—"}</td>
               <td>{e.units_per_case ?? "—"}</td>
               <td>{e.quantity} {e.unit}</td>
+              <td>{fmtMoney((e.cost || 0) * (e.quantity || 0))}</td>
               <td>{fmtMoney(e.cost)}</td>
               <td>{fmtDate(e.checked_in_date)}</td>
               <td>{isAdmin && <button className="bk-link bk-link-danger" onClick={() => removeEntry(e.id)}>Remove</button>}</td>
@@ -100,11 +103,15 @@ export default function PricesDrawer({ item, prices, allPrices, vendors, onClose
         <input className="bk-input" type="number" placeholder="Cases" value={form.case_quantity} onChange={(e) => setForm({ ...form, case_quantity: e.target.value })} />
         <input className="bk-input" type="number" placeholder="Units/case" value={form.units_per_case} onChange={(e) => setForm({ ...form, units_per_case: e.target.value })} />
         <input className="bk-input" placeholder="Unit (e.g. bottle, lb)" value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} />
-        <input className="bk-input" type="number" placeholder="Cost/unit" value={form.cost} onChange={(e) => setForm({ ...form, cost: e.target.value })} />
+        <input className="bk-input" type="number" placeholder="Total cost" value={form.total_cost} onChange={(e) => setForm({ ...form, total_cost: e.target.value })} />
         <input className="bk-input" type="date" value={form.checked_in_date} onChange={(e) => setForm({ ...form, checked_in_date: e.target.value })} title="Checked-in date" />
-        <div className="bk-field" style={{ minWidth: 120 }}>
+        <div className="bk-field" style={{ minWidth: 110 }}>
           <span>Total units</span>
           <div className="bk-computed-value">{totalUnits || "—"}</div>
+        </div>
+        <div className="bk-field" style={{ minWidth: 110 }}>
+          <span>Cost/unit</span>
+          <div className="bk-computed-value">{costPerUnit == null ? "—" : fmtMoney(costPerUnit)}</div>
         </div>
         <button className="bk-btn-primary" disabled={saving} onClick={addEntry}>{saving ? "Logging…" : "Log purchase"}</button>
       </div>

@@ -382,6 +382,23 @@ textarea {
   margin-bottom: 14px;
   flex-wrap: wrap;
 }
+.bk-subtab {
+  font-family: var(--font-head);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 12px;
+  font-weight: 600;
+  background: transparent;
+  border: 1.5px solid var(--teal);
+  color: var(--teal);
+  padding: 6px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.bk-subtab.active {
+  background: var(--teal);
+  color: var(--cream);
+}
 .bk-input {
   font-family: var(--font-body);
   border: 1px solid #d8cdb5;
