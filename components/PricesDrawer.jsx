@@ -6,27 +6,39 @@ import { insertPrice, deletePrice } from "@/lib/db";
 import { weightedAvgCost, fmtMoney, fmtDate, todayISO } from "@/lib/costing";
 import { Modal, EmptyState } from "./ui";
 
-export default function PricesDrawer({ item, prices, allPrices, vendors, onClose, onSaved }) {
-  const { isAdmin } = useAuth();
-  const [form, setForm] = useState({
+function blankForm(item) {
+  return {
     vendor_id: "",
     purchase_date: todayISO(),
     checked_in_date: todayISO(),
-    quantity: "",
+    case_quantity: "",
+    units_per_case: "1",
     unit: item.unit || "",
     cost: "",
-  });
+  };
+}
+
+export default function PricesDrawer({ item, prices, allPrices, vendors, onClose, onSaved }) {
+  const { isAdmin } = useAuth();
+  const [form, setForm] = useState(blankForm(item));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
+  const totalUnits = (Number(form.case_quantity) || 0) * (Number(form.units_per_case) || 0);
+
   async function addEntry() {
-    if (!form.quantity || !form.cost) return;
+    if (!form.case_quantity || !form.units_per_case || !form.cost) return;
     setSaving(true);
     setError("");
     try {
-      await insertPrice({ ...form, item_id: item.id, source: "manual" });
+      await insertPrice({
+        ...form,
+        item_id: item.id,
+        quantity: totalUnits,
+        source: "manual",
+      });
       await onSaved();
-      setForm({ ...form, quantity: "", cost: "" });
+      setForm({ ...blankForm(item), vendor_id: form.vendor_id, purchase_date: form.purchase_date, checked_in_date: form.checked_in_date });
     } catch (e) {
       console.error(e);
       setError("Couldn't log that purchase — check your connection and try again.");
@@ -55,18 +67,22 @@ export default function PricesDrawer({ item, prices, allPrices, vendors, onClose
       </div>
       <table className="bk-table bk-table-compact">
         <thead>
-          <tr><th>Date</th><th>Vendor</th><th>Qty</th><th>Unit</th><th>Cost/unit</th><th>Checked in</th><th></th></tr>
+          <tr>
+            <th>Date</th><th>Vendor</th><th>Cases</th><th>Units/case</th><th>Total units</th>
+            <th>Cost/unit</th><th>Checked in</th><th></th>
+          </tr>
         </thead>
         <tbody>
           {prices.length === 0 && (
-            <tr><td colSpan={7}><EmptyState text="No purchases logged yet." /></td></tr>
+            <tr><td colSpan={8}><EmptyState text="No purchases logged yet." /></td></tr>
           )}
           {[...prices].sort((a, b) => new Date(b.purchase_date) - new Date(a.purchase_date)).map((e) => (
             <tr key={e.id}>
               <td>{fmtDate(e.purchase_date)}</td>
               <td>{vendors.find((v) => v.id === e.vendor_id)?.name || "—"}</td>
-              <td>{e.quantity}</td>
-              <td>{e.unit}</td>
+              <td>{e.case_quantity ?? "—"}</td>
+              <td>{e.units_per_case ?? "—"}</td>
+              <td>{e.quantity} {e.unit}</td>
               <td>{fmtMoney(e.cost)}</td>
               <td>{fmtDate(e.checked_in_date)}</td>
               <td>{isAdmin && <button className="bk-link bk-link-danger" onClick={() => removeEntry(e.id)}>Remove</button>}</td>
@@ -81,10 +97,15 @@ export default function PricesDrawer({ item, prices, allPrices, vendors, onClose
           {vendors.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
         </select>
         <input className="bk-input" type="date" value={form.purchase_date} onChange={(e) => setForm({ ...form, purchase_date: e.target.value })} />
-        <input className="bk-input" type="number" placeholder="Qty" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} />
-        <input className="bk-input" placeholder="Unit" value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} />
+        <input className="bk-input" type="number" placeholder="Cases" value={form.case_quantity} onChange={(e) => setForm({ ...form, case_quantity: e.target.value })} />
+        <input className="bk-input" type="number" placeholder="Units/case" value={form.units_per_case} onChange={(e) => setForm({ ...form, units_per_case: e.target.value })} />
+        <input className="bk-input" placeholder="Unit (e.g. bottle, lb)" value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} />
         <input className="bk-input" type="number" placeholder="Cost/unit" value={form.cost} onChange={(e) => setForm({ ...form, cost: e.target.value })} />
         <input className="bk-input" type="date" value={form.checked_in_date} onChange={(e) => setForm({ ...form, checked_in_date: e.target.value })} title="Checked-in date" />
+        <div className="bk-field" style={{ minWidth: 120 }}>
+          <span>Total units</span>
+          <div className="bk-computed-value">{totalUnits || "—"}</div>
+        </div>
         <button className="bk-btn-primary" disabled={saving} onClick={addEntry}>{saving ? "Logging…" : "Log purchase"}</button>
       </div>
       {error && <p className="bk-error-text">{error}</p>}

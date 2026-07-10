@@ -79,9 +79,11 @@ create table inventory_prices (
   id uuid primary key default gen_random_uuid(),
   item_id uuid references inventory_items(id) on delete cascade,
   vendor_id uuid references vendors(id) on delete set null,
-  quantity numeric,
+  case_quantity numeric, -- # of cases bought (null for non-case purchases)
+  units_per_case numeric default 1, -- units per case; 1 when not buying by the case
+  quantity numeric, -- total units = case_quantity * units_per_case; drives weighted-avg cost
   unit text,
-  cost numeric,
+  cost numeric, -- cost PER UNIT, not per case
   purchase_date date default current_date,
   checked_in_date date default current_date,
   source text default 'manual' check (source in ('manual', 'upload')),
