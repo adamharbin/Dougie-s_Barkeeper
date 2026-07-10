@@ -178,7 +178,7 @@ export default function InventoryRow({ item, items, prices, isAdmin, onSaved, on
             />
           </div>
           <div>
-            <div className="bk-mini-label">Per 1 {item.unit || "unit"}</div>
+            <div className="bk-mini-label">{draft.recipe_unit || "Recipe units"} per {item.unit || "unit"}</div>
             <input
               className="bk-input"
               type="number"
@@ -187,6 +187,9 @@ export default function InventoryRow({ item, items, prices, isAdmin, onSaved, on
               onBlur={() => saveField({ units_per_purchase_unit: draft.units_per_purchase_unit })}
             />
           </div>
+        </div>
+        <div style={{ fontSize: 11.5, opacity: 0.75, marginTop: 5 }}>
+          {draft.units_per_purchase_unit || 1} {draft.recipe_unit || item.unit || "unit"} = 1 {item.unit || "unit"}
         </div>
         <div style={{ fontSize: 11.5, opacity: 0.75, marginTop: 5 }}>
           {recipeCost == null ? (

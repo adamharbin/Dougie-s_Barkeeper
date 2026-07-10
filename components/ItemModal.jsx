@@ -53,10 +53,15 @@ export default function ItemModal({ item, onClose, onSaved }) {
         <Field label="Recipe unit (optional — e.g. oz, if recipes use a finer unit than above)">
           <input className="bk-input" value={form.recipe_unit} onChange={(e) => set("recipe_unit", e.target.value)} />
         </Field>
-        <Field label={`# of recipe units per 1 ${form.unit || "unit"}`}>
+        <Field label={`${form.recipe_unit || "Recipe units"} per ${form.unit || "unit"}`}>
           <input className="bk-input" type="number" value={form.units_per_purchase_unit} onChange={(e) => set("units_per_purchase_unit", e.target.value)} />
         </Field>
       </div>
+      {form.recipe_unit && (
+        <p className="bk-disclaimer" style={{ marginTop: 0 }}>
+          {form.units_per_purchase_unit || 1} {form.recipe_unit} = 1 {form.unit || "unit"}
+        </p>
+      )}
       {error && <p className="bk-error-text">{error}</p>}
       <div className="bk-modal-actions">
         <button className="bk-btn-secondary" onClick={onClose}>Cancel</button>
