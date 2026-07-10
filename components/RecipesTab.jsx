@@ -63,7 +63,7 @@ export default function RecipesTab({ recipes, items, prices, settings, onSaved }
       ) : (
         <table className="bk-table">
           <thead>
-            <tr><th>Recipe</th><th>Tag</th><th>Menu category</th><th>Menu price</th><th>Labor time</th><th>Food cost %</th><th>Prime cost $</th><th>Prime cost %</th><th></th></tr>
+            <tr><th>Recipe</th><th>Tag</th><th>Menu category</th><th>Menu price</th><th>Labor cost</th><th>Food cost $</th><th>Food cost %</th><th>Prime cost $</th><th>Prime cost %</th><th></th></tr>
           </thead>
           <tbody>
             {filtered.map((r) => {
@@ -75,7 +75,8 @@ export default function RecipesTab({ recipes, items, prices, settings, onSaved }
                   <td><Pill tag={r.category_tag} /></td>
                   <td style={{ fontSize: 12.5 }}>{r.menu_category || "—"}</td>
                   <td>{fmtMoney(r.menu_price)}</td>
-                  <td>{r.labor_minutes ? `${r.labor_minutes} min · ${fmtMoney(m.labor)}` : <span className="bk-needs-pricing">no time set</span>}</td>
+                  <td>{r.labor_minutes ? fmtMoney(m.labor) : <span className="bk-needs-pricing">no time set</span>}</td>
+                  <td>{fmtMoney(m.ingCost)}</td>
                   <td className={healthClass(m.foodCostPct, target)}>{fmtPct(m.foodCostPct)}</td>
                   <td>{fmtMoney(m.prime)}</td>
                   <td className={healthClass(m.primeCostPct, goals.target_prime_cost_pct)}>{fmtPct(m.primeCostPct)}</td>
