@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { saveInventoryCount } from "@/lib/db";
-import { weightedAvgCost, fmtMoney, todayISO } from "@/lib/costing";
+import { computeInventoryValuation, fmtMoney, todayISO } from "@/lib/costing";
 import { Modal, Pill } from "./ui";
 
 export default function InventoryCountModal({ items, prices, onClose, onSaved }) {
@@ -11,17 +11,18 @@ export default function InventoryCountModal({ items, prices, onClose, onSaved })
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  const rows = useMemo(() => {
-    return items.map((item) => {
-      const cost = weightedAvgCost(item.id, prices);
-      const entered = counts[item.id];
-      const qty = entered !== undefined && entered !== "" ? Number(entered) : item.on_hand_qty;
-      const value = qty != null && cost != null ? qty * cost : null;
-      return { item, cost, qty, value, touched: entered !== undefined && entered !== "" };
-    });
-  }, [items, prices, counts]);
+  const overrides = useMemo(() => {
+    const o = {};
+    for (const [itemId, entered] of Object.entries(counts)) {
+      if (entered !== "") o[itemId] = Number(entered);
+    }
+    return o;
+  }, [counts]);
 
-  const totalValue = rows.reduce((s, r) => s + (r.value || 0), 0);
+  const { rows, totalValue } = useMemo(
+    () => computeInventoryValuation(items, prices, overrides),
+    [items, prices, overrides]
+  );
   const touchedCount = rows.filter((r) => r.touched).length;
 
   async function save() {
