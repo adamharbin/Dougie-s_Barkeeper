@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useAuth } from "@/lib/useAuth";
 import { deleteItem } from "@/lib/db";
 import { downloadCSV } from "@/lib/csv";
-import { weightedAvgCost, costPerRecipeUnit, checkedInDate, estimatedExpiration, daysUntil, onHandValue, fmtMoney } from "@/lib/costing";
+import { weightedAvgCost, checkedInDate, estimatedExpiration, daysUntil, onHandValue, formatPurchaseUnitLabel, fmtMoney } from "@/lib/costing";
 import { SectionHead, EmptyState } from "./ui";
 import ItemModal from "./ItemModal";
 import PricesDrawer from "./PricesDrawer";
@@ -19,6 +19,7 @@ export default function InventoryTab({ items, prices, vendors, onSaved }) {
   const [search, setSearch] = useState("");
   const [tagFilter, setTagFilter] = useState("All");
   const [sortKey, setSortKey] = useState("name");
+  const [editing, setEditing] = useState(null);
   const [addingNew, setAddingNew] = useState(false);
   const [pricesFor, setPricesFor] = useState(null);
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -33,7 +34,6 @@ export default function InventoryTab({ items, prices, vendors, onSaved }) {
     const withCalc = list.map((i) => ({
       ...i,
       _cost: weightedAvgCost(i.id, prices),
-      _recipeCost: costPerRecipeUnit(i, prices),
       _checkedIn: checkedInDate(i.id, prices),
       _exp: estimatedExpiration(i, prices),
       _onHandValue: onHandValue(i, prices),
@@ -62,8 +62,11 @@ export default function InventoryTab({ items, prices, vendors, onSaved }) {
   }
 
   function exportCSV() {
-    const rows = [["Name", "Tag", "Unit", "Weighted avg cost", "Recipe unit", "Cost per recipe unit", "Par level", "Shelf life (days)", "On hand qty", "On hand value", "Checked in", "Est. expiration"]];
-    filtered.forEach((i) => rows.push([i.name, i.category_tag, i.unit, i._cost ?? "", i.recipe_unit ?? "", i._recipeCost ?? "", i.par_level ?? "", i.shelf_life_days ?? "", i.on_hand_qty ?? "", i._onHandValue ?? "", i._checkedIn ?? "", i._exp ?? ""]));
+    const rows = [["Name", "Tag", "Purchase unit", "Recipe unit", "Weighted avg cost", "Par level", "Shelf life (days)", "On hand qty", "On hand value", "Checked in", "Est. expiration"]];
+    filtered.forEach((i) => rows.push([
+      i.name, i.category_tag, formatPurchaseUnitLabel(i), i.recipe_unit ?? "", i._cost ?? "",
+      i.par_level ?? "", i.shelf_life_days ?? "", i.on_hand_qty ?? "", i._onHandValue ?? "", i._checkedIn ?? "", i._exp ?? "",
+    ]));
     downloadCSV(rows, "barkeeper-inventory.csv");
   }
 
@@ -108,16 +111,15 @@ export default function InventoryTab({ items, prices, vendors, onSaved }) {
           ) : (
             <>
               <p className="bk-disclaimer" style={{ marginTop: 0 }}>
-                Name, tag, unit, par level, and shelf life save as you edit them. Cost and on-hand quantity save
-                through the small inline forms in their columns — both log a real entry (a purchase, or a count),
-                same as the full Prices/Count screens. Recipe unit is only needed if a recipe measures this item
-                differently than how you buy it (e.g. bought by the lb, used in recipes by the oz).
+                Name, tag, recipe unit, par level, and shelf life save as you edit them. Logging a purchase or a new
+                on-hand count both write a real entry, same as the full Prices/Count screens. Purchase-unit details
+                (case size, pack qty, etc.) are set via Edit, since there&apos;s more to them than fits in a cell.
               </p>
               <div style={{ overflowX: "auto" }}>
                 <table className="bk-table">
                   <thead>
                     <tr>
-                      <th>Name</th><th>Tag</th><th>Purchase unit</th><th>Log a purchase</th><th>Recipe unit / factor</th><th>Par level</th>
+                      <th>Name</th><th>Tag</th><th>Purchase unit</th><th>Recipe unit</th><th>Log a purchase</th><th>Par level</th>
                       <th>Shelf life (days)</th><th>On hand</th><th>On-hand value</th>
                       <th>Checked in</th><th>Est. expiration</th><th></th>
                     </tr>
@@ -132,6 +134,7 @@ export default function InventoryTab({ items, prices, vendors, onSaved }) {
                         isAdmin={isAdmin}
                         onSaved={onSaved}
                         onOpenPrices={setPricesFor}
+                        onOpenEdit={setEditing}
                         onDelete={handleDelete}
                       />
                     ))}
@@ -153,8 +156,8 @@ export default function InventoryTab({ items, prices, vendors, onSaved }) {
       {countOpen && (
         <InventoryCountModal items={items} prices={prices} onClose={() => setCountOpen(false)} onSaved={onSaved} />
       )}
-      {addingNew && (
-        <ItemModal item={null} onClose={() => setAddingNew(false)} onSaved={onSaved} />
+      {(addingNew || editing) && (
+        <ItemModal item={editing} onClose={() => { setAddingNew(false); setEditing(null); }} onSaved={onSaved} />
       )}
       {pricesFor && (
         <PricesDrawer

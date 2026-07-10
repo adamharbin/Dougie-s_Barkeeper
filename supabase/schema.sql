@@ -69,12 +69,16 @@ create table inventory_items (
   id uuid primary key default gen_random_uuid(),
   name text not null default '',
   category_tag text not null default 'Food' check (category_tag in ('Food', 'Bar', 'Shared')),
-  unit text default '', -- purchase unit (e.g. "lb", "bottle") — what weighted-avg cost is priced per
   par_level numeric,
   shelf_life_days numeric, -- null = no expiry (e.g. well vodka)
   on_hand_qty numeric, -- most recent physical count; null = never counted
-  recipe_unit text, -- fine-grained unit recipes reference (e.g. "oz"); null = same as `unit`
-  units_per_purchase_unit numeric default 1, -- # of recipe_unit per one `unit` (e.g. 16 oz per lb)
+  recipe_unit text, -- fine-grained unit recipes reference (e.g. "oz")
+  purchase_unit text default '', -- unit this item is normally bought in (e.g. "Case", "Bottle")
+  pack_qty numeric default 1, -- # of inner containers per purchase unit (e.g. 6 bottles per case)
+  inner_unit_label text, -- optional display label for the inner container (e.g. "bottle")
+  size_per_inner numeric default 1, -- size of one inner container, in size_uom
+  size_uom text, -- unit size_per_inner is measured in (usually = recipe_unit, not required to be)
+  manual_factor numeric, -- fallback recipe_unit-per-size_uom factor when size_uom/recipe_unit don't auto-convert
   created_at timestamptz default now()
 );
 
@@ -82,11 +86,12 @@ create table inventory_prices (
   id uuid primary key default gen_random_uuid(),
   item_id uuid references inventory_items(id) on delete cascade,
   vendor_id uuid references vendors(id) on delete set null,
-  case_quantity numeric, -- # of cases bought (null for non-case purchases)
-  units_per_case numeric default 1, -- units per case; 1 when not buying by the case
-  quantity numeric, -- total units = case_quantity * units_per_case; drives weighted-avg cost
-  unit text,
-  cost numeric, -- cost PER UNIT, not per case
+  purchase_unit text, -- what was bought this entry (e.g. "Case") — defaults from the item, editable per entry
+  qty_purchased numeric, -- # of purchase units bought (e.g. "2 cases")
+  cost_per_purchase_unit numeric, -- invoice price for one purchase unit (e.g. $28.50/case)
+  recipe_units_per_purchase_unit_snapshot numeric, -- conversion math LOCKED IN at log time — never recomputed later
+  quantity numeric, -- = qty_purchased * snapshot; recipe units received. Drives weighted-avg cost, unchanged.
+  cost numeric, -- = cost_per_purchase_unit / snapshot; cost PER RECIPE UNIT. Drives weighted-avg cost, unchanged.
   purchase_date date default current_date,
   checked_in_date date default current_date,
   source text default 'manual' check (source in ('manual', 'upload')),

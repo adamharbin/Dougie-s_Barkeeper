@@ -2,13 +2,13 @@
 
 import { useRef, useState } from "react";
 import { insertItem, insertPrice } from "@/lib/db";
-import { todayISO } from "@/lib/costing";
+import { todayISO, recipeUnitsPerPurchaseUnit } from "@/lib/costing";
 import { Modal, Field, EmptyState } from "./ui";
 
 const NEW_ITEM = "__new__";
 
 function blankRow() {
-  return { key: crypto.randomUUID(), matched_item_id: "", name: "", quantity: "", unit: "", cost: "" };
+  return { key: crypto.randomUUID(), matched_item_id: "", name: "", unit: "", qty_purchased: "", cost_per_purchase_unit: "" };
 }
 
 function InvoiceReview({ items, vendors, onCancel, onConfirm, saving, error }) {
@@ -27,14 +27,14 @@ function InvoiceReview({ items, vendors, onCancel, onConfirm, saving, error }) {
   }
 
   const validRows = rows.filter((r) => (r.matched_item_id && r.matched_item_id !== NEW_ITEM) || r.name.trim());
-  const canConfirm = vendorId && validRows.length > 0 && validRows.every((r) => r.quantity && r.cost);
+  const canConfirm = vendorId && validRows.length > 0 && validRows.every((r) => r.qty_purchased && r.cost_per_purchase_unit);
 
   return (
     <div className="bk-card">
       <h4>Review before saving</h4>
       <p className="bk-disclaimer">
         Nothing is saved yet. Match each line to an inventory item (or create a new one), fill in quantity and
-        cost, then confirm.
+        cost per purchase unit, then confirm.
       </p>
       <div className="bk-form-row">
         <Field label="Vendor">
@@ -48,36 +48,45 @@ function InvoiceReview({ items, vendors, onCancel, onConfirm, saving, error }) {
         </Field>
       </div>
       <table className="bk-table bk-table-compact">
-        <thead><tr><th>Matched to</th><th>Qty</th><th>Unit</th><th>Cost/unit</th><th></th></tr></thead>
+        <thead><tr><th>Matched to</th><th>Unit</th><th>Qty purchased</th><th>Cost/purchase unit</th><th></th></tr></thead>
         <tbody>
-          {rows.map((r) => (
-            <tr key={r.key}>
-              <td>
-                <select
-                  className="bk-input"
-                  value={r.matched_item_id}
-                  onChange={(e) => updateRow(r.key, { matched_item_id: e.target.value })}
-                >
-                  <option value="">Choose…</option>
-                  <option value={NEW_ITEM}>+ New item</option>
-                  {items.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
-                </select>
-                {r.matched_item_id === NEW_ITEM && (
-                  <input
+          {rows.map((r) => {
+            const matchedItem = items.find((i) => i.id === r.matched_item_id);
+            return (
+              <tr key={r.key}>
+                <td>
+                  <select
                     className="bk-input"
-                    style={{ marginTop: 6 }}
-                    placeholder="New item name"
-                    value={r.name}
-                    onChange={(e) => updateRow(r.key, { name: e.target.value })}
-                  />
-                )}
-              </td>
-              <td><input className="bk-input" type="number" value={r.quantity} onChange={(e) => updateRow(r.key, { quantity: e.target.value })} /></td>
-              <td><input className="bk-input" value={r.unit} onChange={(e) => updateRow(r.key, { unit: e.target.value })} /></td>
-              <td><input className="bk-input" type="number" value={r.cost} onChange={(e) => updateRow(r.key, { cost: e.target.value })} /></td>
-              <td><button className="bk-link bk-link-danger" onClick={() => removeRow(r.key)}>Remove</button></td>
-            </tr>
-          ))}
+                    value={r.matched_item_id}
+                    onChange={(e) => updateRow(r.key, { matched_item_id: e.target.value })}
+                  >
+                    <option value="">Choose…</option>
+                    <option value={NEW_ITEM}>+ New item</option>
+                    {items.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
+                  </select>
+                  {r.matched_item_id === NEW_ITEM && (
+                    <input
+                      className="bk-input"
+                      style={{ marginTop: 6 }}
+                      placeholder="New item name"
+                      value={r.name}
+                      onChange={(e) => updateRow(r.key, { name: e.target.value })}
+                    />
+                  )}
+                </td>
+                <td>
+                  {r.matched_item_id === NEW_ITEM ? (
+                    <input className="bk-input" placeholder="e.g. bottle" value={r.unit} onChange={(e) => updateRow(r.key, { unit: e.target.value })} />
+                  ) : (
+                    <span style={{ fontSize: 12.5 }}>{matchedItem?.purchase_unit || "—"}</span>
+                  )}
+                </td>
+                <td><input className="bk-input" type="number" value={r.qty_purchased} onChange={(e) => updateRow(r.key, { qty_purchased: e.target.value })} /></td>
+                <td><input className="bk-input" type="number" value={r.cost_per_purchase_unit} onChange={(e) => updateRow(r.key, { cost_per_purchase_unit: e.target.value })} /></td>
+                <td><button className="bk-link bk-link-danger" onClick={() => removeRow(r.key)}>Remove</button></td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
       <button className="bk-link" onClick={addRow}>+ Add line</button>
@@ -117,18 +126,39 @@ export default function UploadInvoiceModal({ items, vendors, onClose, onSaved })
     try {
       for (const r of rows) {
         let itemId = r.matched_item_id;
+        let snapshot;
         if (itemId === NEW_ITEM) {
-          const created = await insertItem({ name: r.name, category_tag: "Food", unit: r.unit, par_level: "", shelf_life_days: "" });
+          // New-item stub: 1:1 passthrough units. Refine recipe/purchase-unit
+          // details later via Inventory > Edit, same as any other new item.
+          const created = await insertItem({
+            name: r.name,
+            category_tag: "Food",
+            recipe_unit: r.unit,
+            purchase_unit: r.unit,
+            pack_qty: 1,
+            size_per_inner: 1,
+            size_uom: r.unit,
+            par_level: "",
+            shelf_life_days: "",
+          });
           itemId = created.id;
+          snapshot = 1;
+        } else {
+          const item = items.find((i) => i.id === itemId);
+          snapshot = recipeUnitsPerPurchaseUnit(item);
+          if (snapshot == null) {
+            throw new Error(`${item.name}'s unit setup isn't complete — fix it in Inventory before uploading this invoice.`);
+          }
         }
         await insertPrice({
           item_id: itemId,
           vendor_id: vendorId,
           purchase_date: date,
           checked_in_date: date,
-          quantity: r.quantity,
-          unit: r.unit,
-          cost: r.cost,
+          purchase_unit: r.unit || undefined,
+          qty_purchased: r.qty_purchased,
+          cost_per_purchase_unit: r.cost_per_purchase_unit,
+          recipe_units_per_purchase_unit_snapshot: snapshot,
           source: "upload",
         });
       }
@@ -136,7 +166,7 @@ export default function UploadInvoiceModal({ items, vendors, onClose, onSaved })
       onClose();
     } catch (e) {
       console.error(e);
-      setError("Couldn't save that invoice — check your connection and try again.");
+      setError(e.message || "Couldn't save that invoice — check your connection and try again.");
       setSaving(false);
     }
   }

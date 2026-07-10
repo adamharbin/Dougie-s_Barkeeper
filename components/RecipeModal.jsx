@@ -27,7 +27,7 @@ export default function RecipeModal({ recipe, items, prices, settings, onClose, 
       const item = items.find((i) => i.id === ingDraft.item_id);
       setForm((f) => ({
         ...f,
-        ingredients: [...f.ingredients, { key: crypto.randomUUID(), item_id: ingDraft.item_id, quantity: ingDraft.quantity, unit: ingDraft.unit || item?.recipe_unit || item?.unit || "" }],
+        ingredients: [...f.ingredients, { key: crypto.randomUUID(), item_id: ingDraft.item_id, quantity: ingDraft.quantity, unit: ingDraft.unit || item?.recipe_unit || "" }],
       }));
     } else {
       if (!ingDraft.newName.trim() || !ingDraft.quantity) return;
@@ -54,7 +54,18 @@ export default function RecipeModal({ recipe, items, prices, settings, onClose, 
       for (const ing of form.ingredients) {
         let itemId = ing.item_id;
         if (!itemId) {
-          const created = await insertItem({ name: ing.newName, category_tag: form.category_tag, unit: ing.unit, par_level: "", shelf_life_days: "" });
+          // New-item stub: 1:1 passthrough units, refined later via Inventory > Edit.
+          const created = await insertItem({
+            name: ing.newName,
+            category_tag: form.category_tag,
+            recipe_unit: ing.unit,
+            purchase_unit: ing.unit,
+            pack_qty: 1,
+            size_per_inner: 1,
+            size_uom: ing.unit,
+            par_level: "",
+            shelf_life_days: "",
+          });
           itemId = created.id;
         }
         resolvedIngredients.push({ item_id: itemId, quantity: ing.quantity, unit: ing.unit });
@@ -146,7 +157,7 @@ export default function RecipeModal({ recipe, items, prices, settings, onClose, 
           <input className="bk-input" type="number" placeholder="Qty" value={ingDraft.quantity} onChange={(e) => setIngDraft({ ...ingDraft, quantity: e.target.value })} />
           <input
             className="bk-input"
-            placeholder={items.find((i) => i.id === ingDraft.item_id)?.recipe_unit || items.find((i) => i.id === ingDraft.item_id)?.unit || "Unit"}
+            placeholder={items.find((i) => i.id === ingDraft.item_id)?.recipe_unit || "Unit"}
             value={ingDraft.unit}
             onChange={(e) => setIngDraft({ ...ingDraft, unit: e.target.value })}
           />
