@@ -10,25 +10,7 @@ import Dashboard from "./Dashboard";
 import InventoryTab from "./InventoryTab";
 import RecipesTab from "./RecipesTab";
 import VendorsTab from "./VendorsTab";
-import { SectionHead, EmptyState } from "./ui";
-
-function ComingSoon({ title, desc }) {
-  return (
-    <div>
-      <SectionHead title={title} desc={desc} />
-      <div className="bk-card">
-        <EmptyState
-          text="This module is next up on the leash."
-          sub="Foundation (auth, nav, schema) is in for review — module build-out comes next."
-        />
-      </div>
-    </div>
-  );
-}
-
-const TAB_CONTENT = {
-  settings: { title: "Settings", desc: "Labor rates and goal margins — these drive the color-coding everywhere else." },
-};
+import SettingsTab from "./SettingsTab";
 
 export default function AppShell() {
   const { user, loading: authLoading, configured } = useAuth();
@@ -126,7 +108,7 @@ export default function AppShell() {
         ) : tab === "vendors" ? (
           <VendorsTab vendors={data.vendors} onSaved={refresh} />
         ) : (
-          <ComingSoon title={TAB_CONTENT[tab].title} desc={TAB_CONTENT[tab].desc} />
+          <SettingsTab settings={data.settings} onSaved={refresh} />
         )}
       </main>
     </div>
