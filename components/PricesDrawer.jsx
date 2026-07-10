@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useAuth } from "@/lib/useAuth";
-import { insertPrice, deletePrice } from "@/lib/db";
+import { insertPrice, updatePrice, deletePrice } from "@/lib/db";
 import { weightedAvgCost, fmtMoney, fmtDate, todayISO } from "@/lib/costing";
 import { Modal, EmptyState } from "./ui";
 
@@ -18,32 +18,63 @@ function blankForm(item) {
   };
 }
 
+function formFromEntry(entry) {
+  const cases = entry.case_quantity ?? entry.quantity ?? "";
+  const perCase = entry.units_per_case ?? 1;
+  return {
+    vendor_id: entry.vendor_id || "",
+    purchase_date: entry.purchase_date || todayISO(),
+    checked_in_date: entry.checked_in_date || todayISO(),
+    case_quantity: String(cases),
+    units_per_case: String(perCase),
+    unit: entry.unit || "",
+    total_cost: String((entry.cost || 0) * (entry.quantity || 0)),
+  };
+}
+
 export default function PricesDrawer({ item, prices, allPrices, vendors, onClose, onSaved }) {
   const { isAdmin } = useAuth();
   const [form, setForm] = useState(blankForm(item));
+  const [editingId, setEditingId] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
   const totalUnits = (Number(form.case_quantity) || 0) * (Number(form.units_per_case) || 0);
   const costPerUnit = totalUnits > 0 ? Number(form.total_cost || 0) / totalUnits : null;
 
-  async function addEntry() {
+  function startEdit(entry) {
+    if (!isAdmin) return;
+    setEditingId(entry.id);
+    setForm(formFromEntry(entry));
+    setError("");
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setForm(blankForm(item));
+    setError("");
+  }
+
+  async function save() {
     if (!form.case_quantity || !form.units_per_case || !form.total_cost || !totalUnits) return;
     setSaving(true);
     setError("");
     try {
-      await insertPrice({
-        ...form,
-        item_id: item.id,
-        quantity: totalUnits,
-        cost: costPerUnit,
-        source: "manual",
-      });
+      const payload = { ...form, quantity: totalUnits, cost: costPerUnit };
+      if (editingId) {
+        await updatePrice(editingId, payload);
+      } else {
+        await insertPrice({ ...payload, item_id: item.id, source: "manual" });
+      }
       await onSaved();
-      setForm({ ...blankForm(item), vendor_id: form.vendor_id, purchase_date: form.purchase_date, checked_in_date: form.checked_in_date });
+      if (editingId) {
+        cancelEdit();
+      } else {
+        setForm({ ...blankForm(item), vendor_id: form.vendor_id, purchase_date: form.purchase_date, checked_in_date: form.checked_in_date });
+      }
     } catch (e) {
       console.error(e);
-      setError("Couldn't log that purchase — check your connection and try again.");
+      setError(`Couldn't ${editingId ? "save" : "log"} that purchase — check your connection and try again.`);
     } finally {
       setSaving(false);
     }
@@ -53,6 +84,7 @@ export default function PricesDrawer({ item, prices, allPrices, vendors, onClose
     if (!isAdmin) return;
     try {
       await deletePrice(id);
+      if (editingId === id) cancelEdit();
       await onSaved();
     } catch (e) {
       console.error(e);
@@ -79,7 +111,7 @@ export default function PricesDrawer({ item, prices, allPrices, vendors, onClose
             <tr><td colSpan={9}><EmptyState text="No purchases logged yet." /></td></tr>
           )}
           {[...prices].sort((a, b) => new Date(b.purchase_date) - new Date(a.purchase_date)).map((e) => (
-            <tr key={e.id}>
+            <tr key={e.id} className={editingId === e.id ? "bk-row-flag" : ""}>
               <td>{fmtDate(e.purchase_date)}</td>
               <td>{vendors.find((v) => v.id === e.vendor_id)?.name || "—"}</td>
               <td>{e.case_quantity ?? "—"}</td>
@@ -88,12 +120,15 @@ export default function PricesDrawer({ item, prices, allPrices, vendors, onClose
               <td>{fmtMoney((e.cost || 0) * (e.quantity || 0))}</td>
               <td>{fmtMoney(e.cost)}</td>
               <td>{fmtDate(e.checked_in_date)}</td>
-              <td>{isAdmin && <button className="bk-link bk-link-danger" onClick={() => removeEntry(e.id)}>Remove</button>}</td>
+              <td className="bk-row-actions">
+                {isAdmin && <button className="bk-link" onClick={() => startEdit(e)}>Edit</button>}
+                {isAdmin && <button className="bk-link bk-link-danger" onClick={() => removeEntry(e.id)}>Remove</button>}
+              </td>
             </tr>
           ))}
         </tbody>
       </table>
-      <h4 className="bk-subhead">Log a purchase</h4>
+      <h4 className="bk-subhead">{editingId ? "Edit purchase" : "Log a purchase"}</h4>
       <div className="bk-inline-form">
         <select className="bk-input" value={form.vendor_id} onChange={(e) => setForm({ ...form, vendor_id: e.target.value })}>
           <option value="">Vendor…</option>
@@ -113,7 +148,10 @@ export default function PricesDrawer({ item, prices, allPrices, vendors, onClose
           <span>Cost/unit</span>
           <div className="bk-computed-value">{costPerUnit == null ? "—" : fmtMoney(costPerUnit)}</div>
         </div>
-        <button className="bk-btn-primary" disabled={saving} onClick={addEntry}>{saving ? "Logging…" : "Log purchase"}</button>
+        <button className="bk-btn-primary" disabled={saving} onClick={save}>
+          {saving ? "Saving…" : editingId ? "Save changes" : "Log purchase"}
+        </button>
+        {editingId && <button className="bk-btn-secondary" onClick={cancelEdit}>Cancel</button>}
       </div>
       {error && <p className="bk-error-text">{error}</p>}
     </Modal>
