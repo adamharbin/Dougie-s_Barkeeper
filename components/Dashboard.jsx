@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import {
   DEFAULT_GOALS,
   fmtMoney,
@@ -9,9 +12,29 @@ import {
   recipeMetrics,
   healthClass,
 } from "@/lib/costing";
-import { Pill, StatCard, SectionHead, EmptyState } from "./ui";
+import { Pill, StatCard, SectionHead, EmptyState, Modal } from "./ui";
+
+const ATTENTION_PREVIEW_LIMIT = 10;
+
+function AttentionList({ expiring, stale }) {
+  return (
+    <ul className="bk-attention-list">
+      {expiring.map(({ item, exp }) => (
+        <li key={"exp_" + item.id} className="bk-attn-orange">
+          <strong>{item.name}</strong> expires {fmtDate(exp)} ({daysUntil(exp)}d)
+        </li>
+      ))}
+      {stale.map((item) => (
+        <li key={"stale_" + item.id} className="bk-attn-gold">
+          <strong>{item.name}</strong> hasn&apos;t had a price update in 90+ days
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 export default function Dashboard({ items, prices, recipes, settings, attention, onGo }) {
+  const [showAllAttention, setShowAllAttention] = useState(false);
   const foodRecipes = recipes.filter((r) => r.category_tag === "Food");
   const barRecipes = recipes.filter((r) => r.category_tag === "Bar");
 
@@ -149,20 +172,25 @@ export default function Dashboard({ items, prices, recipes, settings, attention,
         {attention.stale.length === 0 && attention.expiring.length === 0 ? (
           <EmptyState text="Nothing needs a look right now." sub="Good boy, BarKeeper." />
         ) : (
-          <ul className="bk-attention-list">
-            {attention.expiring.map(({ item, exp }) => (
-              <li key={"exp_" + item.id} className="bk-attn-orange">
-                <strong>{item.name}</strong> expires {fmtDate(exp)} ({daysUntil(exp)}d)
-              </li>
-            ))}
-            {attention.stale.map((item) => (
-              <li key={"stale_" + item.id} className="bk-attn-gold">
-                <strong>{item.name}</strong> hasn&apos;t had a price update in 90+ days
-              </li>
-            ))}
-          </ul>
+          <>
+            <AttentionList
+              expiring={attention.expiring.slice(0, ATTENTION_PREVIEW_LIMIT)}
+              stale={attention.stale.slice(0, Math.max(0, ATTENTION_PREVIEW_LIMIT - attention.expiring.length))}
+            />
+            {attention.expiring.length + attention.stale.length > ATTENTION_PREVIEW_LIMIT && (
+              <button className="bk-link" style={{ marginTop: 8 }} onClick={() => setShowAllAttention(true)}>
+                View more ({attention.expiring.length + attention.stale.length - ATTENTION_PREVIEW_LIMIT} more) →
+              </button>
+            )}
+          </>
         )}
       </div>
+
+      {showAllAttention && (
+        <Modal title="Needs attention — full list" onClose={() => setShowAllAttention(false)}>
+          <AttentionList expiring={attention.expiring} stale={attention.stale} />
+        </Modal>
+      )}
 
       <div className="bk-card">
         <div className="bk-card-head">

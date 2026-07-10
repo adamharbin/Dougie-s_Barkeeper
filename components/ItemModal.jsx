@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 import { insertItem, updateItem } from "@/lib/db";
-import { recipeUnitsPerPurchaseUnit, unitConversionFactor } from "@/lib/costing";
+import { recipeUnitsPerPurchaseUnit, unitConversionFactor, MENU_CATEGORIES } from "@/lib/costing";
 import { Modal, Field } from "./ui";
 
 function blankForm() {
   return {
     name: "",
     category_tag: "Food",
+    menu_category: "",
     par_level: "",
     shelf_life_days: "",
     recipe_unit: "",
@@ -67,6 +68,12 @@ export default function ItemModal({ item, onClose, onSaved }) {
           <input className="bk-input" type="number" value={form.shelf_life_days} onChange={(e) => set("shelf_life_days", e.target.value)} />
         </Field>
       </div>
+      <Field label="Menu category (optional — for filtering)">
+        <select className="bk-input" value={form.menu_category || ""} onChange={(e) => set("menu_category", e.target.value)}>
+          <option value="">— Uncategorized —</option>
+          {MENU_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+        </select>
+      </Field>
 
       <h4 className="bk-subhead">Recipe unit</h4>
       <p className="bk-disclaimer" style={{ marginTop: 0 }}>

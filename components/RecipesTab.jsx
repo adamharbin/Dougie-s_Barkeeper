@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useAuth } from "@/lib/useAuth";
 import { deleteRecipe } from "@/lib/db";
-import { recipeMetrics, healthClass, fmtMoney, fmtPct, DEFAULT_GOALS } from "@/lib/costing";
+import { recipeMetrics, healthClass, fmtMoney, fmtPct, DEFAULT_GOALS, MENU_CATEGORIES } from "@/lib/costing";
 import { SectionHead, EmptyState, Pill } from "./ui";
 import RecipeModal from "./RecipeModal";
 import UploadRecipeModal from "./UploadRecipeModal";
@@ -12,6 +12,7 @@ export default function RecipesTab({ recipes, items, prices, settings, onSaved }
   const { isAdmin } = useAuth();
   const [search, setSearch] = useState("");
   const [tagFilter, setTagFilter] = useState("All");
+  const [menuCategoryFilter, setMenuCategoryFilter] = useState("All");
   const [editing, setEditing] = useState(null);
   const [addingNew, setAddingNew] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -19,9 +20,12 @@ export default function RecipesTab({ recipes, items, prices, settings, onSaved }
 
   const filtered = useMemo(() => {
     let list = recipes.filter((r) => (tagFilter === "All" ? true : r.category_tag === tagFilter));
+    if (menuCategoryFilter !== "All") {
+      list = list.filter((r) => (menuCategoryFilter === "Uncategorized" ? !r.menu_category : r.menu_category === menuCategoryFilter));
+    }
     if (search.trim()) list = list.filter((r) => r.name.toLowerCase().includes(search.toLowerCase()));
     return list;
-  }, [recipes, search, tagFilter]);
+  }, [recipes, search, tagFilter, menuCategoryFilter]);
 
   async function handleDelete(id) {
     if (!isAdmin) return;
@@ -47,6 +51,11 @@ export default function RecipesTab({ recipes, items, prices, settings, onSaved }
         <select className="bk-input" value={tagFilter} onChange={(e) => setTagFilter(e.target.value)}>
           <option>All</option><option>Food</option><option>Bar</option>
         </select>
+        <select className="bk-input" value={menuCategoryFilter} onChange={(e) => setMenuCategoryFilter(e.target.value)}>
+          <option value="All">All menu categories</option>
+          {MENU_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+          <option value="Uncategorized">— Uncategorized —</option>
+        </select>
       </div>
 
       {filtered.length === 0 ? (
@@ -54,7 +63,7 @@ export default function RecipesTab({ recipes, items, prices, settings, onSaved }
       ) : (
         <table className="bk-table">
           <thead>
-            <tr><th>Recipe</th><th>Tag</th><th>Menu price</th><th>Labor time</th><th>Food cost %</th><th>Prime cost $</th><th>Prime cost %</th><th></th></tr>
+            <tr><th>Recipe</th><th>Tag</th><th>Menu category</th><th>Menu price</th><th>Labor time</th><th>Food cost %</th><th>Prime cost $</th><th>Prime cost %</th><th></th></tr>
           </thead>
           <tbody>
             {filtered.map((r) => {
@@ -64,6 +73,7 @@ export default function RecipesTab({ recipes, items, prices, settings, onSaved }
                 <tr key={r.id}>
                   <td>{r.name} {m.hasUnpriced && <span className="bk-flag-tiny" title="Contains ingredients that need pricing">⚠</span>}</td>
                   <td><Pill tag={r.category_tag} /></td>
+                  <td style={{ fontSize: 12.5 }}>{r.menu_category || "—"}</td>
                   <td>{fmtMoney(r.menu_price)}</td>
                   <td>{r.labor_minutes ? `${r.labor_minutes} min · ${fmtMoney(m.labor)}` : <span className="bk-needs-pricing">no time set</span>}</td>
                   <td className={healthClass(m.foodCostPct, target)}>{fmtPct(m.foodCostPct)}</td>

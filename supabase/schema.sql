@@ -79,6 +79,7 @@ create table inventory_items (
   size_per_inner numeric default 1, -- size of one inner container, in size_uom
   size_uom text, -- unit size_per_inner is measured in (usually = recipe_unit, not required to be)
   manual_factor numeric, -- fallback recipe_unit-per-size_uom factor when size_uom/recipe_unit don't auto-convert
+  menu_category text, -- e.g. "On Draft", "Flatbreads", "Supplies" — see lib/costing.js MENU_CATEGORIES
   created_at timestamptz default now()
 );
 
@@ -106,6 +107,7 @@ create table recipes (
   menu_price numeric,
   labor_minutes numeric, -- null/0 = "no time set", never estimated
   prep_notes text default '',
+  menu_category text, -- e.g. "Flatbreads", "Salads" — see lib/costing.js MENU_CATEGORIES
   created_at timestamptz default now()
 );
 

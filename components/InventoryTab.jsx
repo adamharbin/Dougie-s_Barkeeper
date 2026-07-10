@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useAuth } from "@/lib/useAuth";
 import { deleteItem } from "@/lib/db";
 import { downloadCSV } from "@/lib/csv";
-import { weightedAvgCost, checkedInDate, estimatedExpiration, daysUntil, onHandValue, formatPurchaseUnitLabel, fmtMoney } from "@/lib/costing";
+import { weightedAvgCost, checkedInDate, estimatedExpiration, daysUntil, onHandValue, formatPurchaseUnitLabel, fmtMoney, MENU_CATEGORIES } from "@/lib/costing";
 import { SectionHead, EmptyState } from "./ui";
 import ItemModal from "./ItemModal";
 import PricesDrawer from "./PricesDrawer";
@@ -18,6 +18,7 @@ export default function InventoryTab({ items, prices, vendors, onSaved }) {
   const [view, setView] = useState("items"); // items | counts
   const [search, setSearch] = useState("");
   const [tagFilter, setTagFilter] = useState("All");
+  const [menuCategoryFilter, setMenuCategoryFilter] = useState("All");
   const [sortKey, setSortKey] = useState("name");
   const [editing, setEditing] = useState(null);
   const [addingNew, setAddingNew] = useState(false);
@@ -27,6 +28,9 @@ export default function InventoryTab({ items, prices, vendors, onSaved }) {
 
   const filtered = useMemo(() => {
     let list = items.filter((i) => (tagFilter === "All" ? true : i.category_tag === tagFilter));
+    if (menuCategoryFilter !== "All") {
+      list = list.filter((i) => (menuCategoryFilter === "Uncategorized" ? !i.menu_category : i.menu_category === menuCategoryFilter));
+    }
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter((i) => i.name.toLowerCase().includes(q));
@@ -49,7 +53,7 @@ export default function InventoryTab({ items, prices, vendors, onSaved }) {
       return 0;
     });
     return withCalc;
-  }, [items, prices, search, tagFilter, sortKey]);
+  }, [items, prices, search, tagFilter, menuCategoryFilter, sortKey]);
 
   const totalOnHandValue = filtered.reduce((s, i) => s + (i._onHandValue || 0), 0);
   const missingCount = filtered.filter((i) => i._onHandValue == null).length;
@@ -62,9 +66,9 @@ export default function InventoryTab({ items, prices, vendors, onSaved }) {
   }
 
   function exportCSV() {
-    const rows = [["Name", "Tag", "Purchase unit", "Recipe unit", "Weighted avg cost", "Par level", "Shelf life (days)", "On hand qty", "On hand value", "Checked in", "Est. expiration"]];
+    const rows = [["Name", "Tag", "Menu category", "Purchase unit", "Recipe unit", "Weighted avg cost", "Par level", "Shelf life (days)", "On hand qty", "On hand value", "Checked in", "Est. expiration"]];
     filtered.forEach((i) => rows.push([
-      i.name, i.category_tag, formatPurchaseUnitLabel(i), i.recipe_unit ?? "", i._cost ?? "",
+      i.name, i.category_tag, i.menu_category ?? "", formatPurchaseUnitLabel(i), i.recipe_unit ?? "", i._cost ?? "",
       i.par_level ?? "", i.shelf_life_days ?? "", i.on_hand_qty ?? "", i._onHandValue ?? "", i._checkedIn ?? "", i._exp ?? "",
     ]));
     downloadCSV(rows, "barkeeper-inventory.csv");
@@ -98,6 +102,11 @@ export default function InventoryTab({ items, prices, vendors, onSaved }) {
             <select className="bk-input" value={tagFilter} onChange={(e) => setTagFilter(e.target.value)}>
               <option>All</option><option>Food</option><option>Bar</option><option>Shared</option>
             </select>
+            <select className="bk-input" value={menuCategoryFilter} onChange={(e) => setMenuCategoryFilter(e.target.value)}>
+              <option value="All">All menu categories</option>
+              {MENU_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              <option value="Uncategorized">— Uncategorized —</option>
+            </select>
             <select className="bk-input" value={sortKey} onChange={(e) => setSortKey(e.target.value)}>
               <option value="name">Sort: Name</option>
               <option value="cost">Sort: Cost (high→low)</option>
@@ -119,7 +128,7 @@ export default function InventoryTab({ items, prices, vendors, onSaved }) {
                 <table className="bk-table">
                   <thead>
                     <tr>
-                      <th>Name</th><th>Tag</th><th>Purchase unit</th><th>Recipe unit</th><th>Log a purchase</th><th>Par level</th>
+                      <th>Name</th><th>Tag</th><th>Menu category</th><th>Purchase unit</th><th>Recipe unit</th><th>Log a purchase</th><th>Par level</th>
                       <th>Shelf life (days)</th><th>On hand</th><th>On-hand value</th>
                       <th>Checked in</th><th>Est. expiration</th><th></th>
                     </tr>

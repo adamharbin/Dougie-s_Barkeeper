@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useAuth } from "@/lib/useAuth";
 import { insertItem, insertRecipe, updateRecipe, replaceRecipeIngredients } from "@/lib/db";
-import { costPerRecipeUnit, recipeLaborCost, fmtMoney } from "@/lib/costing";
+import { costPerRecipeUnit, recipeLaborCost, fmtMoney, MENU_CATEGORIES } from "@/lib/costing";
 import { Modal, Field, EmptyState } from "./ui";
 
 function blankDraft() {
@@ -14,7 +14,7 @@ export default function RecipeModal({ recipe, items, prices, settings, onClose, 
   const { isAdmin } = useAuth();
   const isNew = !recipe?.id;
   const [form, setForm] = useState(
-    recipe || { name: "", category_tag: "Food", yield: "", menu_price: "", labor_minutes: "", prep_notes: "", ingredients: [] }
+    recipe || { name: "", category_tag: "Food", menu_category: "", yield: "", menu_price: "", labor_minutes: "", prep_notes: "", ingredients: [] }
   );
   const [ingDraft, setIngDraft] = useState(blankDraft());
   const [saving, setSaving] = useState(false);
@@ -101,6 +101,12 @@ export default function RecipeModal({ recipe, items, prices, settings, onClose, 
         <Field label="Yield"><input className="bk-input" disabled={!isAdmin} value={form.yield} onChange={(e) => set("yield", e.target.value)} placeholder="e.g. 24 wings" /></Field>
         <Field label="Menu price"><input className="bk-input" type="number" disabled={!isAdmin} value={form.menu_price} onChange={(e) => set("menu_price", e.target.value)} /></Field>
       </div>
+      <Field label="Menu category">
+        <select className="bk-input" disabled={!isAdmin} value={form.menu_category || ""} onChange={(e) => set("menu_category", e.target.value)}>
+          <option value="">— Uncategorized —</option>
+          {MENU_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+        </select>
+      </Field>
       <div className="bk-form-row">
         <Field label="Labor time (minutes to make/prep one yield)">
           <input className="bk-input" type="number" disabled={!isAdmin} value={form.labor_minutes} onChange={(e) => set("labor_minutes", e.target.value)} />
