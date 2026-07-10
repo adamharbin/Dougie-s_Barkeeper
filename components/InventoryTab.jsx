@@ -117,7 +117,7 @@ export default function InventoryTab({ items, prices, vendors, onSaved }) {
                 <table className="bk-table">
                   <thead>
                     <tr>
-                      <th>Name</th><th>Tag</th><th>Unit</th><th>Cases / Total cost</th><th>Recipe unit / factor</th><th>Par level</th>
+                      <th>Name</th><th>Tag</th><th>Purchase unit</th><th>Log a purchase</th><th>Recipe unit / factor</th><th>Par level</th>
                       <th>Shelf life (days)</th><th>On hand</th><th>On-hand value</th>
                       <th>Checked in</th><th>Est. expiration</th><th></th>
                     </tr>

@@ -143,40 +143,52 @@ export default function InventoryRow({ item, items, prices, isAdmin, onSaved, on
           onBlur={() => saveField({ unit: draft.unit })}
         />
       </td>
-      <td style={{ minWidth: 190 }}>
-        <div style={{ display: "flex", gap: 4, marginBottom: 4 }}>
-          <input className="bk-input" type="number" style={{ width: 55 }} placeholder="Cases" value={caseQty} onChange={(e) => setCaseQty(e.target.value)} />
-          <input className="bk-input" type="number" style={{ width: 65 }} placeholder="Units/case" value={unitsPerCase} onChange={(e) => setUnitsPerCase(e.target.value)} />
+      <td style={{ minWidth: 280 }}>
+        <div className="bk-mini-form">
+          <div>
+            <div className="bk-mini-label">Cases</div>
+            <input className="bk-input" type="number" value={caseQty} onChange={(e) => setCaseQty(e.target.value)} />
+          </div>
+          <div>
+            <div className="bk-mini-label">Units/case</div>
+            <input className="bk-input" type="number" value={unitsPerCase} onChange={(e) => setUnitsPerCase(e.target.value)} />
+          </div>
+          <div style={{ gridColumn: "1 / -1" }}>
+            <div className="bk-mini-label">Total cost</div>
+            <div style={{ display: "flex", gap: 6 }}>
+              <input className="bk-input" type="number" style={{ flex: 1 }} value={totalCost} onChange={(e) => setTotalCost(e.target.value)} />
+              <button className="bk-mini-btn" disabled={!totalUnits || !totalCost || saving} onClick={logCost}>Log</button>
+            </div>
+          </div>
         </div>
-        <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-          <input className="bk-input" type="number" style={{ width: 75 }} placeholder="Total cost" value={totalCost} onChange={(e) => setTotalCost(e.target.value)} />
-          <button className="bk-link" disabled={!totalUnits || !totalCost || saving} onClick={logCost}>Log</button>
-        </div>
-        <div style={{ fontSize: 11.5, opacity: 0.75, marginTop: 3 }}>
+        <div style={{ fontSize: 11.5, opacity: 0.75, marginTop: 5 }}>
           {cost == null ? <span className="bk-needs-pricing">needs pricing</span> : `${fmtMoney(cost)} / ${item.unit || "unit"} avg`}
         </div>
       </td>
-      <td style={{ minWidth: 130 }}>
-        <div style={{ display: "flex", gap: 4, marginBottom: 4 }}>
-          <input
-            className="bk-input"
-            style={{ width: 60 }}
-            placeholder="e.g. oz"
-            value={draft.recipe_unit}
-            onChange={(e) => setDraft({ ...draft, recipe_unit: e.target.value })}
-            onBlur={() => saveField({ recipe_unit: draft.recipe_unit })}
-          />
-          <input
-            className="bk-input"
-            type="number"
-            style={{ width: 55 }}
-            title={`# recipe units per 1 ${item.unit || "unit"}`}
-            value={draft.units_per_purchase_unit}
-            onChange={(e) => setDraft({ ...draft, units_per_purchase_unit: e.target.value })}
-            onBlur={() => saveField({ units_per_purchase_unit: draft.units_per_purchase_unit })}
-          />
+      <td style={{ minWidth: 190 }}>
+        <div className="bk-mini-form">
+          <div>
+            <div className="bk-mini-label">Recipe unit</div>
+            <input
+              className="bk-input"
+              placeholder={item.unit || "unit"}
+              value={draft.recipe_unit}
+              onChange={(e) => setDraft({ ...draft, recipe_unit: e.target.value })}
+              onBlur={() => saveField({ recipe_unit: draft.recipe_unit })}
+            />
+          </div>
+          <div>
+            <div className="bk-mini-label">Per 1 {item.unit || "unit"}</div>
+            <input
+              className="bk-input"
+              type="number"
+              value={draft.units_per_purchase_unit}
+              onChange={(e) => setDraft({ ...draft, units_per_purchase_unit: e.target.value })}
+              onBlur={() => saveField({ units_per_purchase_unit: draft.units_per_purchase_unit })}
+            />
+          </div>
         </div>
-        <div style={{ fontSize: 11.5, opacity: 0.75 }}>
+        <div style={{ fontSize: 11.5, opacity: 0.75, marginTop: 5 }}>
           {recipeCost == null ? (
             <span className="bk-needs-pricing">needs pricing</span>
           ) : (
