@@ -92,7 +92,7 @@ create table recipes (
   id uuid primary key default gen_random_uuid(),
   name text not null default 'New recipe',
   category_tag text not null default 'Food' check (category_tag in ('Food', 'Bar')),
-  yield numeric,
+  yield text, -- free text (e.g. "24 wings", "1 batch") not a strict count
   menu_price numeric,
   labor_minutes numeric, -- null/0 = "no time set", never estimated
   prep_notes text default '',
