@@ -46,7 +46,7 @@ export default function AppShell() {
         setData(next);
         setLoadError("");
       } catch (e) {
-        console.error(e);
+        console.error("loadAll failed:", e?.message || e, e);
         setLoadError("Couldn't load data — check your connection and try refreshing.");
       } finally {
         setDataLoading(false);
@@ -62,7 +62,7 @@ export default function AppShell() {
       setData(next);
       setLoadError("");
     } catch (e) {
-      console.error(e);
+      console.error("refresh failed:", e?.message || e, e);
       setLoadError("Couldn't reload data — check your connection and try again.");
     }
   }, []);
@@ -103,10 +103,14 @@ export default function AppShell() {
     <div className="bk-app">
       <Nav tab={tab} onTabChange={setTab} />
       <main className="bk-main">
-        {loadError && <div className="bk-save-error">{loadError}</div>}
-        {dataLoading || !data ? (
+        {loadError && (
+          <div className="bk-save-error">
+            {loadError} <button className="bk-user-signout" onClick={refresh}>Retry</button>
+          </div>
+        )}
+        {dataLoading ? (
           <div className="bk-loading">Fetching the bowl of data…</div>
-        ) : tab === "dashboard" ? (
+        ) : !data ? null : tab === "dashboard" ? (
           <Dashboard
             items={data.items}
             prices={data.prices}
