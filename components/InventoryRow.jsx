@@ -4,6 +4,7 @@ import { Fragment, useState } from "react";
 import { updateItem, insertPrice, saveInventoryCount } from "@/lib/db";
 import {
   weightedAvgCost,
+  costPerRecipeUnit,
   checkedInDate,
   estimatedExpiration,
   daysUntil,
@@ -21,14 +22,18 @@ export default function InventoryRow({ item, items, prices, isAdmin, onSaved, on
     unit: item.unit || "",
     par_level: item.par_level ?? "",
     shelf_life_days: item.shelf_life_days ?? "",
+    recipe_unit: item.recipe_unit || "",
+    units_per_purchase_unit: item.units_per_purchase_unit ?? 1,
   });
   const [onHandDraft, setOnHandDraft] = useState("");
-  const [costQty, setCostQty] = useState("");
-  const [costTotal, setCostTotal] = useState("");
+  const [caseQty, setCaseQty] = useState("");
+  const [unitsPerCase, setUnitsPerCase] = useState("1");
+  const [totalCost, setTotalCost] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
   const cost = weightedAvgCost(item.id, prices);
+  const recipeCost = costPerRecipeUnit(item, prices);
   const checkedIn = checkedInDate(item.id, prices);
   const exp = estimatedExpiration({ ...item, shelf_life_days: draft.shelf_life_days }, prices);
   const dLeft = exp ? daysUntil(exp) : null;
@@ -72,19 +77,19 @@ export default function InventoryRow({ item, items, prices, isAdmin, onSaved, on
     }
   }
 
+  const totalUnits = (Number(caseQty) || 0) * (Number(unitsPerCase) || 0);
+
   async function logCost() {
-    const qty = Number(costQty);
-    const total = Number(costTotal);
-    if (!qty || !total) return;
+    if (!caseQty || !unitsPerCase || !totalCost || !totalUnits) return;
     setSaving(true);
     setError("");
     try {
       await insertPrice({
         item_id: item.id,
-        quantity: qty,
-        cost: total / qty,
-        case_quantity: qty,
-        units_per_case: 1,
+        quantity: totalUnits,
+        cost: Number(totalCost) / totalUnits,
+        case_quantity: caseQty,
+        units_per_case: unitsPerCase,
         unit: item.unit || "",
         vendor_id: null,
         purchase_date: todayISO(),
@@ -92,8 +97,9 @@ export default function InventoryRow({ item, items, prices, isAdmin, onSaved, on
         source: "manual",
       });
       await onSaved();
-      setCostQty("");
-      setCostTotal("");
+      setCaseQty("");
+      setUnitsPerCase("1");
+      setTotalCost("");
     } catch (e) {
       console.error(e);
       setError("Couldn't log that purchase — try again.");
@@ -137,14 +143,45 @@ export default function InventoryRow({ item, items, prices, isAdmin, onSaved, on
           onBlur={() => saveField({ unit: draft.unit })}
         />
       </td>
-      <td>
-        <div className="bk-inline-form" style={{ flexWrap: "nowrap", marginTop: 0, gap: 4 }}>
-          <input className="bk-input" type="number" style={{ width: 50 }} placeholder="Qty" value={costQty} onChange={(e) => setCostQty(e.target.value)} />
-          <input className="bk-input" type="number" style={{ width: 65 }} placeholder="Total $" value={costTotal} onChange={(e) => setCostTotal(e.target.value)} />
-          <button className="bk-link" disabled={!costQty || !costTotal || saving} onClick={logCost}>Log</button>
+      <td style={{ minWidth: 190 }}>
+        <div style={{ display: "flex", gap: 4, marginBottom: 4 }}>
+          <input className="bk-input" type="number" style={{ width: 55 }} placeholder="Cases" value={caseQty} onChange={(e) => setCaseQty(e.target.value)} />
+          <input className="bk-input" type="number" style={{ width: 65 }} placeholder="Units/case" value={unitsPerCase} onChange={(e) => setUnitsPerCase(e.target.value)} />
+        </div>
+        <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+          <input className="bk-input" type="number" style={{ width: 75 }} placeholder="Total cost" value={totalCost} onChange={(e) => setTotalCost(e.target.value)} />
+          <button className="bk-link" disabled={!totalUnits || !totalCost || saving} onClick={logCost}>Log</button>
         </div>
         <div style={{ fontSize: 11.5, opacity: 0.75, marginTop: 3 }}>
-          {cost == null ? <span className="bk-needs-pricing">needs pricing</span> : `${fmtMoney(cost)} avg`}
+          {cost == null ? <span className="bk-needs-pricing">needs pricing</span> : `${fmtMoney(cost)} / ${item.unit || "unit"} avg`}
+        </div>
+      </td>
+      <td style={{ minWidth: 130 }}>
+        <div style={{ display: "flex", gap: 4, marginBottom: 4 }}>
+          <input
+            className="bk-input"
+            style={{ width: 60 }}
+            placeholder="e.g. oz"
+            value={draft.recipe_unit}
+            onChange={(e) => setDraft({ ...draft, recipe_unit: e.target.value })}
+            onBlur={() => saveField({ recipe_unit: draft.recipe_unit })}
+          />
+          <input
+            className="bk-input"
+            type="number"
+            style={{ width: 55 }}
+            title={`# recipe units per 1 ${item.unit || "unit"}`}
+            value={draft.units_per_purchase_unit}
+            onChange={(e) => setDraft({ ...draft, units_per_purchase_unit: e.target.value })}
+            onBlur={() => saveField({ units_per_purchase_unit: draft.units_per_purchase_unit })}
+          />
+        </div>
+        <div style={{ fontSize: 11.5, opacity: 0.75 }}>
+          {recipeCost == null ? (
+            <span className="bk-needs-pricing">needs pricing</span>
+          ) : (
+            `${fmtMoney(recipeCost)} / ${draft.recipe_unit || item.unit || "unit"}`
+          )}
         </div>
       </td>
       <td>
@@ -188,7 +225,7 @@ export default function InventoryRow({ item, items, prices, isAdmin, onSaved, on
     </tr>
     {error && (
       <tr>
-        <td colSpan={11} className="bk-error-text">{error}</td>
+        <td colSpan={12} className="bk-error-text">{error}</td>
       </tr>
     )}
     </Fragment>

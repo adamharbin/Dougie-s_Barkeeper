@@ -7,7 +7,7 @@ import { Modal, Field } from "./ui";
 export default function ItemModal({ item, onClose, onSaved }) {
   const isNew = !item?.id;
   const [form, setForm] = useState(
-    item || { name: "", category_tag: "Food", unit: "", par_level: "", shelf_life_days: "" }
+    item || { name: "", category_tag: "Food", unit: "", par_level: "", shelf_life_days: "", recipe_unit: "", units_per_purchase_unit: "1" }
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -49,6 +49,14 @@ export default function ItemModal({ item, onClose, onSaved }) {
       <Field label="Shelf life, in days (for expiration estimate — leave blank if it doesn't expire)">
         <input className="bk-input" type="number" value={form.shelf_life_days} onChange={(e) => set("shelf_life_days", e.target.value)} />
       </Field>
+      <div className="bk-form-row">
+        <Field label="Recipe unit (optional — e.g. oz, if recipes use a finer unit than above)">
+          <input className="bk-input" value={form.recipe_unit} onChange={(e) => set("recipe_unit", e.target.value)} />
+        </Field>
+        <Field label={`# of recipe units per 1 ${form.unit || "unit"}`}>
+          <input className="bk-input" type="number" value={form.units_per_purchase_unit} onChange={(e) => set("units_per_purchase_unit", e.target.value)} />
+        </Field>
+      </div>
       {error && <p className="bk-error-text">{error}</p>}
       <div className="bk-modal-actions">
         <button className="bk-btn-secondary" onClick={onClose}>Cancel</button>

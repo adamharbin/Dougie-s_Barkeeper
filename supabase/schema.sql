@@ -69,10 +69,12 @@ create table inventory_items (
   id uuid primary key default gen_random_uuid(),
   name text not null default '',
   category_tag text not null default 'Food' check (category_tag in ('Food', 'Bar', 'Shared')),
-  unit text default '',
+  unit text default '', -- purchase unit (e.g. "lb", "bottle") — what weighted-avg cost is priced per
   par_level numeric,
   shelf_life_days numeric, -- null = no expiry (e.g. well vodka)
   on_hand_qty numeric, -- most recent physical count; null = never counted
+  recipe_unit text, -- fine-grained unit recipes reference (e.g. "oz"); null = same as `unit`
+  units_per_purchase_unit numeric default 1, -- # of recipe_unit per one `unit` (e.g. 16 oz per lb)
   created_at timestamptz default now()
 );
 

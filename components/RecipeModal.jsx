@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useAuth } from "@/lib/useAuth";
 import { insertItem, insertRecipe, updateRecipe, replaceRecipeIngredients } from "@/lib/db";
-import { weightedAvgCost, recipeLaborCost, fmtMoney } from "@/lib/costing";
+import { costPerRecipeUnit, recipeLaborCost, fmtMoney } from "@/lib/costing";
 import { Modal, Field, EmptyState } from "./ui";
 
 function blankDraft() {
@@ -27,7 +27,7 @@ export default function RecipeModal({ recipe, items, prices, settings, onClose, 
       const item = items.find((i) => i.id === ingDraft.item_id);
       setForm((f) => ({
         ...f,
-        ingredients: [...f.ingredients, { key: crypto.randomUUID(), item_id: ingDraft.item_id, quantity: ingDraft.quantity, unit: ingDraft.unit || item?.unit || "" }],
+        ingredients: [...f.ingredients, { key: crypto.randomUUID(), item_id: ingDraft.item_id, quantity: ingDraft.quantity, unit: ingDraft.unit || item?.recipe_unit || item?.unit || "" }],
       }));
     } else {
       if (!ingDraft.newName.trim() || !ingDraft.quantity) return;
@@ -115,7 +115,7 @@ export default function RecipeModal({ recipe, items, prices, settings, onClose, 
           {form.ingredients.map((ing) => {
             const item = ing.item_id ? items.find((i) => i.id === ing.item_id) : null;
             const name = item?.name || ing.newName || "New item";
-            const cost = item ? weightedAvgCost(item.id, prices) : null;
+            const cost = item ? costPerRecipeUnit(item, prices) : null;
             return (
               <tr key={ing.key}>
                 <td>{name} {!item && <span className="bk-flag-tiny" title="Will be created as a new inventory item"> new</span>} {item && cost == null && <span className="bk-needs-pricing">needs pricing</span>}</td>
@@ -144,7 +144,12 @@ export default function RecipeModal({ recipe, items, prices, settings, onClose, 
             <input className="bk-input" placeholder="New ingredient name" value={ingDraft.newName} onChange={(e) => setIngDraft({ ...ingDraft, newName: e.target.value })} />
           )}
           <input className="bk-input" type="number" placeholder="Qty" value={ingDraft.quantity} onChange={(e) => setIngDraft({ ...ingDraft, quantity: e.target.value })} />
-          <input className="bk-input" placeholder="Unit" value={ingDraft.unit} onChange={(e) => setIngDraft({ ...ingDraft, unit: e.target.value })} />
+          <input
+            className="bk-input"
+            placeholder={items.find((i) => i.id === ingDraft.item_id)?.recipe_unit || items.find((i) => i.id === ingDraft.item_id)?.unit || "Unit"}
+            value={ingDraft.unit}
+            onChange={(e) => setIngDraft({ ...ingDraft, unit: e.target.value })}
+          />
           <button className="bk-btn-secondary" onClick={addIngredient}>+ Add ingredient</button>
         </div>
       )}
