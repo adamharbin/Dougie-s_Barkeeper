@@ -60,9 +60,18 @@ export default function InventoryTab({ items, prices, vendors, onSaved }) {
 
   async function handleDelete(id) {
     if (!isAdmin) return;
-    if (!confirm("Delete this inventory item? Purchase history will stay logged but unlinked.")) return;
-    await deleteItem(id);
-    await onSaved();
+    if (!confirm("Delete this inventory item? Purchase history will be deleted with it.")) return;
+    try {
+      await deleteItem(id);
+      await onSaved();
+    } catch (e) {
+      if (e.code === "23503") {
+        alert("Can't delete this item — it's still used in a recipe or a saved inventory count. Remove it from those first, then delete it.");
+      } else {
+        console.error(e);
+        alert("Couldn't delete that item — check your connection and try again.");
+      }
+    }
   }
 
   function exportCSV() {
