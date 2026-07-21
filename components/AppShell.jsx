@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/useAuth";
 import { loadAll } from "@/lib/db";
 import { isStalePrice, estimatedExpiration, daysUntil } from "@/lib/costing";
 import LoginForm from "./LoginForm";
+import ResetPasswordForm from "./ResetPasswordForm";
 import Nav from "./Nav";
 import Dashboard from "./Dashboard";
 import InventoryTab from "./InventoryTab";
@@ -13,7 +14,7 @@ import VendorsTab from "./VendorsTab";
 import SettingsTab from "./SettingsTab";
 
 export default function AppShell() {
-  const { user, loading: authLoading, configured } = useAuth();
+  const { user, loading: authLoading, configured, recovery } = useAuth();
   const [tab, setTab] = useState("dashboard");
 
   const [data, setData] = useState(null);
@@ -75,6 +76,10 @@ export default function AppShell() {
 
   if (authLoading) {
     return <div className="bk-loading">Fetching the bowl of data…</div>;
+  }
+
+  if (recovery) {
+    return <ResetPasswordForm />;
   }
 
   if (!user) {
