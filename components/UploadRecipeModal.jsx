@@ -24,7 +24,6 @@ export default function UploadRecipeModal({ items, prices, settings, onClose, on
   if (status === "review") {
     return (
       <RecipeModal
-        recipe={null}
         items={items}
         prices={prices}
         settings={settings}

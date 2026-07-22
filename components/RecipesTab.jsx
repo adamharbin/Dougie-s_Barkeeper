@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useAuth } from "@/lib/useAuth";
 import { deleteRecipe } from "@/lib/db";
 import { recipeMetrics, healthClass, fmtMoney, fmtPct, DEFAULT_GOALS, MENU_CATEGORIES } from "@/lib/costing";
@@ -13,7 +14,6 @@ export default function RecipesTab({ recipes, items, prices, settings, onSaved }
   const [search, setSearch] = useState("");
   const [tagFilter, setTagFilter] = useState("All");
   const [menuCategoryFilter, setMenuCategoryFilter] = useState("All");
-  const [editing, setEditing] = useState(null);
   const [addingNew, setAddingNew] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
   const goals = settings.goals || DEFAULT_GOALS;
@@ -81,7 +81,9 @@ export default function RecipesTab({ recipes, items, prices, settings, onSaved }
                   <td>{fmtMoney(m.prime)}</td>
                   <td className={healthClass(m.primeCostPct, goals.target_prime_cost_pct)}>{fmtPct(m.primeCostPct)}</td>
                   <td className="bk-row-actions">
-                    <button className="bk-link" onClick={() => setEditing(r)}>{isAdmin ? "Edit" : "View"}</button>
+                    <Link href={`/recipes/${r.id}`} className="bk-btn-primary bk-btn-compact">
+                      {isAdmin ? "View/Edit" : "View"}
+                    </Link>
                     {isAdmin && <button className="bk-link bk-link-danger" onClick={() => handleDelete(r.id)}>Delete</button>}
                   </td>
                 </tr>
@@ -93,13 +95,12 @@ export default function RecipesTab({ recipes, items, prices, settings, onSaved }
       <p className="bk-disclaimer">
         Labor cost per recipe is labor time (minutes) × the hourly rate for its category (Food or Bar), set in Settings. Recipes with no labor time set are treated as $0 labor until it&apos;s added.
       </p>
-      {(editing || addingNew) && (
+      {addingNew && (
         <RecipeModal
-          recipe={editing}
           items={items}
           prices={prices}
           settings={settings}
-          onClose={() => { setEditing(null); setAddingNew(false); }}
+          onClose={() => setAddingNew(false)}
           onSaved={onSaved}
         />
       )}

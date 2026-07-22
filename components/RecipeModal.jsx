@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useAuth } from "@/lib/useAuth";
-import { insertItem, insertRecipe, updateRecipe, replaceRecipeIngredients } from "@/lib/db";
+import { useRouter } from "next/navigation";
+import { insertItem, insertRecipe, replaceRecipeIngredients } from "@/lib/db";
 import { costPerRecipeUnit, recipeLaborCost, fmtMoney, MENU_CATEGORIES } from "@/lib/costing";
 import { Modal, Field, EmptyState } from "./ui";
 
@@ -10,12 +10,11 @@ function blankDraft() {
   return { key: crypto.randomUUID(), mode: "existing", item_id: "", newName: "", quantity: "", unit: "" };
 }
 
-export default function RecipeModal({ recipe, items, prices, settings, onClose, onSaved }) {
-  const { isAdmin } = useAuth();
-  const isNew = !recipe?.id;
-  const [form, setForm] = useState(
-    recipe || { name: "", category_tag: "Food", menu_category: "", yield: "", menu_price: "", labor_minutes: "", prep_notes: "", ingredients: [] }
-  );
+// Create-only: editing an existing recipe now happens on its own page
+// (/recipes/[id]), not in this modal.
+export default function RecipeModal({ items, prices, settings, onClose, onSaved }) {
+  const router = useRouter();
+  const [form, setForm] = useState({ name: "", category_tag: "Food", menu_category: "", yield: "", menu_price: "", labor_minutes: "", prep_notes: "", ingredients: [] });
   const [ingDraft, setIngDraft] = useState(blankDraft());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -71,12 +70,12 @@ export default function RecipeModal({ recipe, items, prices, settings, onClose, 
         resolvedIngredients.push({ item_id: itemId, quantity: ing.quantity, unit: ing.unit });
       }
 
-      const recipeId = isNew ? (await insertRecipe(form)).id : recipe.id;
-      if (!isNew) await updateRecipe(recipeId, form);
-      await replaceRecipeIngredients(recipeId, resolvedIngredients);
+      const created = await insertRecipe(form);
+      await replaceRecipeIngredients(created.id, resolvedIngredients);
 
       await onSaved();
       onClose();
+      router.push(`/recipes/${created.id}`);
     } catch (e) {
       console.error(e);
       setError("Couldn't save that recipe — check your connection and try again.");
@@ -87,29 +86,29 @@ export default function RecipeModal({ recipe, items, prices, settings, onClose, 
   const laborRate = form.category_tag === "Food" ? settings.labor_rates?.food_hourly_rate : settings.labor_rates?.bar_hourly_rate;
 
   return (
-    <Modal title={isAdmin ? (isNew ? "Add recipe" : `Edit ${recipe.name}`) : recipe.name} onClose={onClose} wide>
+    <Modal title="Add recipe" onClose={onClose} wide>
       <Field label="Name">
-        <input className="bk-input" disabled={!isAdmin} value={form.name} onChange={(e) => set("name", e.target.value)} />
+        <input className="bk-input" value={form.name} onChange={(e) => set("name", e.target.value)} />
       </Field>
       <div className="bk-form-row">
         <Field label="Category tag">
-          <select className="bk-input" disabled={!isAdmin} value={form.category_tag} onChange={(e) => set("category_tag", e.target.value)}>
+          <select className="bk-input" value={form.category_tag} onChange={(e) => set("category_tag", e.target.value)}>
             <option>Food</option>
             <option>Bar</option>
           </select>
         </Field>
-        <Field label="Yield"><input className="bk-input" disabled={!isAdmin} value={form.yield} onChange={(e) => set("yield", e.target.value)} placeholder="e.g. 24 wings" /></Field>
-        <Field label="Menu price"><input className="bk-input" type="number" disabled={!isAdmin} value={form.menu_price} onChange={(e) => set("menu_price", e.target.value)} /></Field>
+        <Field label="Yield"><input className="bk-input" value={form.yield} onChange={(e) => set("yield", e.target.value)} placeholder="e.g. 24 wings" /></Field>
+        <Field label="Menu price"><input className="bk-input" type="number" value={form.menu_price} onChange={(e) => set("menu_price", e.target.value)} /></Field>
       </div>
       <Field label="Menu category">
-        <select className="bk-input" disabled={!isAdmin} value={form.menu_category || ""} onChange={(e) => set("menu_category", e.target.value)}>
+        <select className="bk-input" value={form.menu_category || ""} onChange={(e) => set("menu_category", e.target.value)}>
           <option value="">— Uncategorized —</option>
           {MENU_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
       </Field>
       <div className="bk-form-row">
         <Field label="Labor time (minutes to make/prep one yield)">
-          <input className="bk-input" type="number" disabled={!isAdmin} value={form.labor_minutes} onChange={(e) => set("labor_minutes", e.target.value)} />
+          <input className="bk-input" type="number" value={form.labor_minutes} onChange={(e) => set("labor_minutes", e.target.value)} />
         </Field>
         <div className="bk-field">
           <span>Labor cost (calculated)</span>
@@ -119,12 +118,12 @@ export default function RecipeModal({ recipe, items, prices, settings, onClose, 
         </div>
       </div>
       <Field label="Prep notes">
-        <textarea className="bk-input" rows={2} disabled={!isAdmin} value={form.prep_notes} onChange={(e) => set("prep_notes", e.target.value)} />
+        <textarea className="bk-input" rows={2} value={form.prep_notes} onChange={(e) => set("prep_notes", e.target.value)} />
       </Field>
 
       <h4 className="bk-subhead">Ingredients</h4>
       <table className="bk-table bk-table-compact">
-        <thead><tr><th>Ingredient</th><th>Qty</th><th>Unit</th><th>Cost</th>{isAdmin && <th></th>}</tr></thead>
+        <thead><tr><th>Ingredient</th><th>Qty</th><th>Unit</th><th>Cost</th><th></th></tr></thead>
         <tbody>
           {form.ingredients.length === 0 && (
             <tr><td colSpan={5}><EmptyState text="No ingredients yet." /></td></tr>
@@ -139,47 +138,43 @@ export default function RecipeModal({ recipe, items, prices, settings, onClose, 
                 <td>{ing.quantity}</td>
                 <td>{ing.unit}</td>
                 <td>{cost == null ? "—" : fmtMoney(cost * Number(ing.quantity || 0))}</td>
-                {isAdmin && <td><button className="bk-link bk-link-danger" onClick={() => removeIngredient(ing.key)}>Remove</button></td>}
+                <td><button className="bk-link bk-link-danger" onClick={() => removeIngredient(ing.key)}>Remove</button></td>
               </tr>
             );
           })}
         </tbody>
       </table>
 
-      {isAdmin && (
-        <div className="bk-inline-form">
-          <select className="bk-input" value={ingDraft.mode} onChange={(e) => setIngDraft({ ...ingDraft, mode: e.target.value })}>
-            <option value="existing">Existing item</option>
-            <option value="new">New item</option>
+      <div className="bk-inline-form">
+        <select className="bk-input" value={ingDraft.mode} onChange={(e) => setIngDraft({ ...ingDraft, mode: e.target.value })}>
+          <option value="existing">Existing item</option>
+          <option value="new">New item</option>
+        </select>
+        {ingDraft.mode === "existing" ? (
+          <select className="bk-input" value={ingDraft.item_id} onChange={(e) => setIngDraft({ ...ingDraft, item_id: e.target.value })}>
+            <option value="">Choose item…</option>
+            {items.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
           </select>
-          {ingDraft.mode === "existing" ? (
-            <select className="bk-input" value={ingDraft.item_id} onChange={(e) => setIngDraft({ ...ingDraft, item_id: e.target.value })}>
-              <option value="">Choose item…</option>
-              {items.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
-            </select>
-          ) : (
-            <input className="bk-input" placeholder="New ingredient name" value={ingDraft.newName} onChange={(e) => setIngDraft({ ...ingDraft, newName: e.target.value })} />
-          )}
-          <input className="bk-input" type="number" placeholder="Qty" value={ingDraft.quantity} onChange={(e) => setIngDraft({ ...ingDraft, quantity: e.target.value })} />
-          <input
-            className="bk-input"
-            placeholder={items.find((i) => i.id === ingDraft.item_id)?.recipe_unit || "Unit"}
-            value={ingDraft.unit}
-            onChange={(e) => setIngDraft({ ...ingDraft, unit: e.target.value })}
-          />
-          <button className="bk-btn-secondary" onClick={addIngredient}>+ Add ingredient</button>
-        </div>
-      )}
+        ) : (
+          <input className="bk-input" placeholder="New ingredient name" value={ingDraft.newName} onChange={(e) => setIngDraft({ ...ingDraft, newName: e.target.value })} />
+        )}
+        <input className="bk-input" type="number" placeholder="Qty" value={ingDraft.quantity} onChange={(e) => setIngDraft({ ...ingDraft, quantity: e.target.value })} />
+        <input
+          className="bk-input"
+          placeholder={items.find((i) => i.id === ingDraft.item_id)?.recipe_unit || "Unit"}
+          value={ingDraft.unit}
+          onChange={(e) => setIngDraft({ ...ingDraft, unit: e.target.value })}
+        />
+        <button className="bk-btn-secondary" onClick={addIngredient}>+ Add ingredient</button>
+      </div>
 
       {error && <p className="bk-error-text">{error}</p>}
-      {isAdmin && (
-        <div className="bk-modal-actions">
-          <button className="bk-btn-secondary" onClick={onClose}>Cancel</button>
-          <button className="bk-btn-primary" disabled={!form.name.trim() || saving} onClick={save}>
-            {saving ? "Saving…" : "Save recipe"}
-          </button>
-        </div>
-      )}
+      <div className="bk-modal-actions">
+        <button className="bk-btn-secondary" onClick={onClose}>Cancel</button>
+        <button className="bk-btn-primary" disabled={!form.name.trim() || saving} onClick={save}>
+          {saving ? "Saving…" : "Save recipe"}
+        </button>
+      </div>
     </Modal>
   );
 }

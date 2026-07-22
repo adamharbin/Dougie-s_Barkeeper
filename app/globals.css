@@ -535,6 +535,12 @@ textarea.bk-input {
   padding: 9px 16px;
   border-radius: 8px;
   cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+}
+.bk-btn-compact {
+  padding: 5px 10px;
+  font-size: 11px;
 }
 .bk-btn-primary {
   background: var(--teal);
@@ -798,4 +804,206 @@ textarea.bk-input {
 .bk-auth-card .bk-btn-primary {
   width: 100%;
   margin-top: 4px;
+}
+
+/* ---- Recipe detail page ---- */
+.bk-recipe-detail-header {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.bk-recipe-detail-header h2 {
+  font-family: var(--font-head);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0;
+  color: var(--teal);
+}
+.bk-recipe-detail-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+  gap: 24px;
+  align-items: start;
+}
+@media (max-width: 860px) {
+  .bk-recipe-detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.bk-recipe-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+/* ---- Prep Method tabs ---- */
+.bk-step-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.bk-step-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.bk-step-badge {
+  font-family: var(--font-head);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--teal);
+  color: var(--cream);
+  border-radius: 6px;
+  padding: 3px 9px;
+}
+.bk-step-controls {
+  display: flex;
+  gap: 10px;
+}
+.bk-step-photo {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #f4efe3;
+  min-height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.bk-step-photo:not(.bk-step-photo-empty) {
+  cursor: pointer;
+}
+.bk-step-photo-empty {
+  border: 1.5px dashed #cfc4a8;
+}
+.bk-step-photo-img {
+  width: 100%;
+  max-height: 320px;
+  object-fit: cover;
+  display: block;
+}
+.bk-step-photo-hint {
+  color: #8a8072;
+  font-size: 13px;
+  padding: 20px;
+  text-align: center;
+}
+.bk-step-photo-replace {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background: rgba(61, 57, 53, 0.7);
+  color: #fff;
+  font-size: 11.5px;
+  padding: 4px 9px;
+  border-radius: 6px;
+}
+
+/* ---- Prep step slideshow ---- */
+.bk-slideshow-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--charcoal);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  color: var(--cream);
+}
+.bk-slideshow-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--cream);
+  border: none;
+  border-radius: 999px;
+  width: 44px;
+  height: 44px;
+  font-size: 18px;
+  cursor: pointer;
+  z-index: 1;
+}
+.bk-slideshow-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  gap: 16px;
+  overflow-y: auto;
+  min-height: 0;
+}
+.bk-slideshow-image-wrap {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+}
+.bk-slideshow-image {
+  max-width: 100%;
+  max-height: 55vh;
+  object-fit: contain;
+  border-radius: 10px;
+}
+.bk-slideshow-image-empty {
+  color: #a89f8f;
+  font-size: 15px;
+}
+.bk-slideshow-info {
+  max-width: 640px;
+  text-align: center;
+}
+.bk-slideshow-badge {
+  display: inline-block;
+  margin-bottom: 10px;
+}
+.bk-slideshow-title {
+  font-family: var(--font-head);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0 0 8px;
+}
+.bk-slideshow-instructions {
+  font-size: 17px;
+  line-height: 1.5;
+  margin: 0;
+}
+.bk-slideshow-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  padding: 20px;
+}
+.bk-slideshow-chevron {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--cream);
+  border: none;
+  border-radius: 999px;
+  width: 56px;
+  height: 56px;
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+}
+.bk-slideshow-chevron:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+.bk-slideshow-counter {
+  font-family: var(--font-head);
+  letter-spacing: 0.5px;
+  font-size: 15px;
+  min-width: 60px;
+  text-align: center;
 }

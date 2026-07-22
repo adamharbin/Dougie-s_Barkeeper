@@ -1,12 +1,13 @@
-"use client";
-
-import { AuthProvider } from "@/lib/useAuth";
+import { Suspense } from "react";
+import AuthGate from "@/components/AuthGate";
 import AppShell from "@/components/AppShell";
 
 export default function Home() {
   return (
-    <AuthProvider>
-      <AppShell />
-    </AuthProvider>
+    <AuthGate>
+      <Suspense fallback={<div className="bk-loading">Fetching the bowl of data…</div>}>
+        <AppShell />
+      </Suspense>
+    </AuthGate>
   );
 }

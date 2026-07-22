@@ -120,6 +120,22 @@ create table recipe_ingredients (
   created_at timestamptz default now()
 );
 
+-- One row per photo+instructions step in a recipe's build guide ("Prep
+-- Method"). step_number is numeric (not serial) so two adjacent steps can be
+-- reordered by swapping their step_number values without renumbering the
+-- rest of the list. image_url points at the recipe-step-images Storage
+-- bucket (public bucket — see storage policies below).
+create table recipe_steps (
+  id uuid primary key default gen_random_uuid(),
+  recipe_id uuid references recipes(id) on delete cascade,
+  step_number numeric not null,
+  title text,
+  instructions text,
+  image_url text,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
 create table goal_settings (
   id int primary key default 1,
   target_food_cost_pct numeric default 30,
@@ -177,6 +193,7 @@ alter table inventory_items enable row level security;
 alter table inventory_prices enable row level security;
 alter table recipes enable row level security;
 alter table recipe_ingredients enable row level security;
+alter table recipe_steps enable row level security;
 alter table goal_settings enable row level security;
 alter table uploads enable row level security;
 alter table inventory_counts enable row level security;
@@ -221,6 +238,13 @@ create policy "recipe_ingredients insert" on recipe_ingredients for insert with 
 create policy "recipe_ingredients update" on recipe_ingredients for update using (public.is_admin());
 create policy "recipe_ingredients delete" on recipe_ingredients for delete using (public.is_admin());
 
+-- recipe_steps (Prep Method build guide): view = any signed-in user.
+-- All writes = admin only, same as recipes/recipe_ingredients.
+create policy "recipe_steps select" on recipe_steps for select using (auth.uid() is not null);
+create policy "recipe_steps insert" on recipe_steps for insert with check (public.is_admin());
+create policy "recipe_steps update" on recipe_steps for update using (public.is_admin());
+create policy "recipe_steps delete" on recipe_steps for delete using (public.is_admin());
+
 -- goal_settings: view = any signed-in user. Edit = admin only.
 create policy "goals select" on goal_settings for select using (auth.uid() is not null);
 create policy "goals update" on goal_settings for update using (public.is_admin());
@@ -239,3 +263,22 @@ create policy "counts insert" on inventory_counts for insert with check (auth.ui
 
 create policy "count_lines select" on inventory_count_lines for select using (auth.uid() is not null);
 create policy "count_lines insert" on inventory_count_lines for insert with check (auth.uid() is not null);
+
+-- ---------------------------------------------------------------------------
+-- Storage — recipe step photos (public bucket: anyone with the URL can view
+-- a photo, only admins can upload/replace/delete). Nothing sensitive lives
+-- here, so a public bucket avoids signed-URL expiry/refresh complexity.
+-- ---------------------------------------------------------------------------
+
+insert into storage.buckets (id, name, public)
+values ('recipe-step-images', 'recipe-step-images', true)
+on conflict (id) do nothing;
+
+create policy "recipe step images select" on storage.objects for select
+  using (bucket_id = 'recipe-step-images');
+create policy "recipe step images insert" on storage.objects for insert
+  with check (bucket_id = 'recipe-step-images' and public.is_admin());
+create policy "recipe step images update" on storage.objects for update
+  using (bucket_id = 'recipe-step-images' and public.is_admin());
+create policy "recipe step images delete" on storage.objects for delete
+  using (bucket_id = 'recipe-step-images' and public.is_admin());

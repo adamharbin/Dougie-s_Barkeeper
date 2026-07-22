@@ -1,4 +1,5 @@
 import { Oswald, Noto_Serif, Caveat } from "next/font/google";
+import { AuthProvider } from "@/lib/useAuth";
 import "./globals.css";
 
 const oswald = Oswald({
@@ -30,7 +31,9 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${oswald.variable} ${notoSerif.variable} ${caveat.variable}`}>
-      <body>{children}</body>
+      <body>
+        <AuthProvider>{children}</AuthProvider>
+      </body>
     </html>
   );
 }

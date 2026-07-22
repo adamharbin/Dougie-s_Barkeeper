@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/useAuth";
 import { loadAll } from "@/lib/db";
 import { isStalePrice, estimatedExpiration, daysUntil } from "@/lib/costing";
-import LoginForm from "./LoginForm";
-import ResetPasswordForm from "./ResetPasswordForm";
 import Nav from "./Nav";
 import Dashboard from "./Dashboard";
 import InventoryTab from "./InventoryTab";
@@ -13,9 +12,13 @@ import RecipesTab from "./RecipesTab";
 import VendorsTab from "./VendorsTab";
 import SettingsTab from "./SettingsTab";
 
+const TAB_IDS = ["dashboard", "inventory", "recipes", "vendors", "settings"];
+
 export default function AppShell() {
-  const { user, loading: authLoading, configured, recovery } = useAuth();
-  const [tab, setTab] = useState("dashboard");
+  const { user } = useAuth();
+  const searchParams = useSearchParams();
+  const initialTab = TAB_IDS.includes(searchParams.get("tab")) ? searchParams.get("tab") : "dashboard";
+  const [tab, setTab] = useState(initialTab);
 
   const [data, setData] = useState(null);
   const [dataLoading, setDataLoading] = useState(true);
@@ -58,33 +61,6 @@ export default function AppShell() {
       .filter((x) => x.exp && daysUntil(x.exp) <= 3 && daysUntil(x.exp) >= 0);
     return { stale, expiring };
   }, [data]);
-
-  if (!configured) {
-    return (
-      <div className="bk-auth-screen">
-        <div className="bk-auth-card">
-          <img src="/logo.png" alt="Dougie's Barkeeper" className="bk-auth-logo" />
-          <h2>Connect Supabase</h2>
-          <p className="bk-disclaimer" style={{ marginTop: 0 }}>
-            Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to .env.local, then run supabase/schema.sql
-            against your project to enable sign-in.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  if (authLoading) {
-    return <div className="bk-loading">Fetching the bowl of data…</div>;
-  }
-
-  if (recovery) {
-    return <ResetPasswordForm />;
-  }
-
-  if (!user) {
-    return <LoginForm />;
-  }
 
   return (
     <div className="bk-app">
