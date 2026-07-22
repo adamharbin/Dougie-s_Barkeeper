@@ -38,27 +38,25 @@ function RecipeRoute() {
     }
   }, []);
 
-  if (dataLoading) {
-    return <div className="bk-loading">Fetching the bowl of data…</div>;
-  }
-
-  if (loadError && !data) {
-    return (
-      <div className="bk-save-error">
-        {loadError} <button className="bk-user-signout" onClick={refresh}>Retry</button>
-      </div>
-    );
-  }
-
   return (
-    <RecipeDetailPage
-      recipeId={id}
-      recipes={data.recipes}
-      items={data.items}
-      prices={data.prices}
-      settings={data.settings}
-      onSaved={refresh}
-    />
+    <main className="bk-main">
+      {dataLoading ? (
+        <div className="bk-loading">Fetching the bowl of data…</div>
+      ) : loadError && !data ? (
+        <div className="bk-save-error">
+          {loadError} <button className="bk-user-signout" onClick={refresh}>Retry</button>
+        </div>
+      ) : (
+        <RecipeDetailPage
+          recipeId={id}
+          recipes={data.recipes}
+          items={data.items}
+          prices={data.prices}
+          settings={data.settings}
+          onSaved={refresh}
+        />
+      )}
+    </main>
   );
 }
 
