@@ -17,7 +17,7 @@ import {
   MENU_CATEGORIES,
 } from "@/lib/costing";
 
-export default function InventoryRow({ item, items, prices, isAdmin, onSaved, onOpenPrices, onOpenEdit, onDelete }) {
+export default function InventoryRow({ item, items, prices, isAdmin, onSaved, onOpenEdit, onDelete }) {
   const [draft, setDraft] = useState({
     name: item.name,
     category_tag: item.category_tag,
@@ -215,7 +215,6 @@ export default function InventoryRow({ item, items, prices, isAdmin, onSaved, on
       <td className={flag ? "bk-expiring" : ""}>{exp ? `${fmtDate(exp)}${flag ? ` (${dLeft}d)` : ""}` : "—"}</td>
       <td className="bk-row-actions">
         <button className="bk-link" onClick={() => onOpenEdit(item)}>Edit</button>
-        <button className="bk-link" onClick={() => onOpenPrices(item)}>Prices</button>
         {isAdmin && <button className="bk-link bk-link-danger" onClick={() => onDelete(item.id)}>Delete</button>}
       </td>
     </tr>

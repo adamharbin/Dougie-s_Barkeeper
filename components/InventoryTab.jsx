@@ -7,7 +7,6 @@ import { downloadCSV } from "@/lib/csv";
 import { weightedAvgCost, checkedInDate, estimatedExpiration, daysUntil, onHandValue, formatPurchaseUnitLabel, fmtMoney, MENU_CATEGORIES } from "@/lib/costing";
 import { SectionHead, EmptyState } from "./ui";
 import ItemModal from "./ItemModal";
-import PricesDrawer from "./PricesDrawer";
 import UploadInvoiceModal from "./UploadInvoiceModal";
 import InventoryCountModal from "./InventoryCountModal";
 import CountHistory from "./CountHistory";
@@ -22,7 +21,6 @@ export default function InventoryTab({ items, prices, vendors, onSaved }) {
   const [sortKey, setSortKey] = useState("name");
   const [editing, setEditing] = useState(null);
   const [addingNew, setAddingNew] = useState(false);
-  const [pricesFor, setPricesFor] = useState(null);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [countOpen, setCountOpen] = useState(false);
 
@@ -130,8 +128,9 @@ export default function InventoryTab({ items, prices, vendors, onSaved }) {
             <>
               <p className="bk-disclaimer" style={{ marginTop: 0 }}>
                 Name, tag, recipe unit, par level, and shelf life save as you edit them. Logging a purchase or a new
-                on-hand count both write a real entry, same as the full Prices/Count screens. Purchase-unit details
-                (case size, pack qty, etc.) are set via Edit, since there&apos;s more to them than fits in a cell.
+                on-hand count both write a real entry, same as the full Purchase History/Count screens. Purchase-unit
+                details (case size, pack qty, etc.) and full purchase history are set via Edit, since there&apos;s
+                more to them than fits in a cell.
               </p>
               <div style={{ overflowX: "auto" }}>
                 <table className="bk-table">
@@ -151,7 +150,6 @@ export default function InventoryTab({ items, prices, vendors, onSaved }) {
                         prices={prices}
                         isAdmin={isAdmin}
                         onSaved={onSaved}
-                        onOpenPrices={setPricesFor}
                         onOpenEdit={setEditing}
                         onDelete={handleDelete}
                       />
@@ -175,15 +173,11 @@ export default function InventoryTab({ items, prices, vendors, onSaved }) {
         <InventoryCountModal items={items} prices={prices} onClose={() => setCountOpen(false)} onSaved={onSaved} />
       )}
       {(addingNew || editing) && (
-        <ItemModal item={editing} onClose={() => { setAddingNew(false); setEditing(null); }} onSaved={onSaved} />
-      )}
-      {pricesFor && (
-        <PricesDrawer
-          item={pricesFor}
-          prices={prices.filter((p) => p.item_id === pricesFor.id)}
-          allPrices={prices}
+        <ItemModal
+          item={editing}
+          prices={prices}
           vendors={vendors}
-          onClose={() => setPricesFor(null)}
+          onClose={() => { setAddingNew(false); setEditing(null); }}
           onSaved={onSaved}
         />
       )}
