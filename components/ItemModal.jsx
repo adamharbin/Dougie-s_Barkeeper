@@ -5,6 +5,9 @@ import { insertItem, updateItem } from "@/lib/db";
 import { recipeUnitsPerPurchaseUnit, unitConversionFactor, MENU_CATEGORIES } from "@/lib/costing";
 import { Modal, Field } from "./ui";
 
+// Defaults match "count" mode (the common case new items start on) so the
+// hidden recipe_unit/size_uom are already correct if the user never touches
+// the mode toggle at all.
 function blankForm() {
   return {
     name: "",
@@ -12,25 +15,51 @@ function blankForm() {
     menu_category: "",
     par_level: "",
     shelf_life_days: "",
-    recipe_unit: "",
+    recipe_unit: "each",
     purchase_unit: "",
     pack_qty: "1",
     inner_unit_label: "",
     size_per_inner: "1",
-    size_uom: "",
+    size_uom: "each",
     manual_factor: "",
   };
+}
+
+// New items default to "count" (the common case). Existing items are
+// detected as "count" or "weight" only if their fields exactly match what
+// the quick-setup flow itself would have produced — anything else (bottles,
+// volumes, a manual factor already set) opens in "advanced" untouched.
+function detectPackagingMode(item) {
+  if (!item?.id) return "count";
+  const su = (item.size_uom || "").toLowerCase();
+  const ru = (item.recipe_unit || "").toLowerCase();
+  const spi = Number(item.size_per_inner ?? 1);
+  const hasManual = item.manual_factor !== null && item.manual_factor !== undefined && item.manual_factor !== "";
+  if (hasManual || spi !== 1) return "advanced";
+  if ((ru === "each" || ru === "ea") && (su === "each" || su === "ea")) return "count";
+  if (ru === "oz" && su === "lb") return "weight";
+  return "advanced";
 }
 
 export default function ItemModal({ item, onClose, onSaved }) {
   const isNew = !item?.id;
   const [form, setForm] = useState(item || blankForm());
+  const [mode, setMode] = useState(detectPackagingMode(item));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
+  function chooseMode(m) {
+    setMode(m);
+    if (m === "count") {
+      setForm((f) => ({ ...f, recipe_unit: "each", size_per_inner: "1", size_uom: "each", manual_factor: "" }));
+    } else if (m === "weight") {
+      setForm((f) => ({ ...f, recipe_unit: "oz", size_per_inner: "1", size_uom: "lb", manual_factor: "" }));
+    }
+  }
+
   const autoFactor = unitConversionFactor(form.size_uom, form.recipe_unit);
-  const needsManualFactor = form.size_uom && form.recipe_unit && autoFactor == null;
+  const needsManualFactor = mode === "advanced" && form.size_uom && form.recipe_unit && autoFactor == null;
   const perPurchaseUnit = recipeUnitsPerPurchaseUnit(form);
 
   async function save() {
@@ -75,44 +104,63 @@ export default function ItemModal({ item, onClose, onSaved }) {
         </select>
       </Field>
 
-      <h4 className="bk-subhead">Recipe unit</h4>
-      <p className="bk-disclaimer" style={{ marginTop: 0 }}>
-        The fine-grained unit recipes will measure this ingredient in (e.g. oz, ml, each).
-      </p>
-      <Field label="Recipe unit">
-        <input className="bk-input" placeholder="e.g. oz" value={form.recipe_unit} onChange={(e) => set("recipe_unit", e.target.value)} />
-      </Field>
-
       <h4 className="bk-subhead">How you buy it</h4>
-      <div className="bk-form-row">
-        <Field label="Purchase unit">
-          <input className="bk-input" placeholder="e.g. Case" value={form.purchase_unit} onChange={(e) => set("purchase_unit", e.target.value)} />
-        </Field>
-        <Field label="Pack qty (inner containers per purchase unit)">
-          <input className="bk-input" type="number" value={form.pack_qty} onChange={(e) => set("pack_qty", e.target.value)} />
-        </Field>
-        <Field label="Inner unit label (optional, e.g. bottle)">
-          <input className="bk-input" value={form.inner_unit_label} onChange={(e) => set("inner_unit_label", e.target.value)} />
-        </Field>
-      </div>
-      <div className="bk-form-row">
-        <Field label="Size per inner container">
-          <input className="bk-input" type="number" value={form.size_per_inner} onChange={(e) => set("size_per_inner", e.target.value)} />
-        </Field>
-        <Field label="Size unit (usually same as recipe unit)">
-          <input className="bk-input" placeholder="e.g. oz" value={form.size_uom} onChange={(e) => set("size_uom", e.target.value)} />
-        </Field>
+      <div className="bk-toolbar">
+        <button className={`bk-subtab ${mode === "count" ? "active" : ""}`} onClick={() => chooseMode("count")}>Count</button>
+        <button className={`bk-subtab ${mode === "weight" ? "active" : ""}`} onClick={() => chooseMode("weight")}>Weight (lbs → oz)</button>
+        <button className={`bk-subtab ${mode === "advanced" ? "active" : ""}`} onClick={() => chooseMode("advanced")}>Advanced</button>
       </div>
 
-      {needsManualFactor && (
-        <>
-          <p className="bk-error-text">
-            {form.size_uom} and {form.recipe_unit} don&apos;t auto-convert (different kinds of measurement). Enter
-            how many {form.recipe_unit} are in 1 {form.size_uom} manually below.
-          </p>
-          <Field label={`${form.recipe_unit || "recipe units"} per 1 ${form.size_uom || "size unit"}`}>
-            <input className="bk-input" type="number" value={form.manual_factor} onChange={(e) => set("manual_factor", e.target.value)} />
+      {(mode === "count" || mode === "weight") && (
+        <div className="bk-form-row">
+          <Field label="What do you call this package? (e.g. Case, Box, Bag)">
+            <input className="bk-input" placeholder="Case" value={form.purchase_unit} onChange={(e) => set("purchase_unit", e.target.value)} />
           </Field>
+          <Field label={mode === "count" ? "How many per case?" : "How many lbs per case?"}>
+            <input className="bk-input" type="number" value={form.pack_qty} onChange={(e) => set("pack_qty", e.target.value)} />
+          </Field>
+        </div>
+      )}
+
+      {mode === "advanced" && (
+        <>
+          <p className="bk-disclaimer" style={{ marginTop: 0 }}>
+            The fine-grained unit recipes will measure this ingredient in (e.g. oz, ml, each).
+          </p>
+          <Field label="Recipe unit">
+            <input className="bk-input" placeholder="e.g. oz" value={form.recipe_unit} onChange={(e) => set("recipe_unit", e.target.value)} />
+          </Field>
+          <div className="bk-form-row">
+            <Field label="Purchase unit">
+              <input className="bk-input" placeholder="e.g. Case" value={form.purchase_unit} onChange={(e) => set("purchase_unit", e.target.value)} />
+            </Field>
+            <Field label="Pack qty (inner containers per purchase unit)">
+              <input className="bk-input" type="number" value={form.pack_qty} onChange={(e) => set("pack_qty", e.target.value)} />
+            </Field>
+            <Field label="Inner unit label (optional, e.g. bottle)">
+              <input className="bk-input" value={form.inner_unit_label} onChange={(e) => set("inner_unit_label", e.target.value)} />
+            </Field>
+          </div>
+          <div className="bk-form-row">
+            <Field label="Size per inner container">
+              <input className="bk-input" type="number" value={form.size_per_inner} onChange={(e) => set("size_per_inner", e.target.value)} />
+            </Field>
+            <Field label="Size unit (usually same as recipe unit)">
+              <input className="bk-input" placeholder="e.g. oz" value={form.size_uom} onChange={(e) => set("size_uom", e.target.value)} />
+            </Field>
+          </div>
+
+          {needsManualFactor && (
+            <>
+              <p className="bk-error-text">
+                {form.size_uom} and {form.recipe_unit} don&apos;t auto-convert (different kinds of measurement). Enter
+                how many {form.recipe_unit} are in 1 {form.size_uom} manually below.
+              </p>
+              <Field label={`${form.recipe_unit || "recipe units"} per 1 ${form.size_uom || "size unit"}`}>
+                <input className="bk-input" type="number" value={form.manual_factor} onChange={(e) => set("manual_factor", e.target.value)} />
+              </Field>
+            </>
+          )}
         </>
       )}
 
