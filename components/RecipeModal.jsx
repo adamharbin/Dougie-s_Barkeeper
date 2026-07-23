@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { insertItem, insertRecipe, replaceRecipeIngredients } from "@/lib/db";
 import { costPerRecipeUnit, recipeLaborCost, fmtMoney, MENU_CATEGORIES } from "@/lib/costing";
-import { Modal, Field, EmptyState } from "./ui";
+import { Modal, Field, EmptyState, SearchableSelect } from "./ui";
 
 function blankDraft() {
   return { key: crypto.randomUUID(), mode: "existing", item_id: "", newName: "", quantity: "", unit: "" };
@@ -84,6 +84,7 @@ export default function RecipeModal({ items, prices, settings, onClose, onSaved 
   }
 
   const laborRate = form.category_tag === "Food" ? settings.labor_rates?.food_hourly_rate : settings.labor_rates?.bar_hourly_rate;
+  const itemOptions = [...items].sort((a, b) => a.name.localeCompare(b.name)).map((i) => ({ value: i.id, label: i.name }));
 
   return (
     <Modal title="Add recipe" onClose={onClose} wide>
@@ -151,10 +152,12 @@ export default function RecipeModal({ items, prices, settings, onClose, onSaved 
           <option value="new">New item</option>
         </select>
         {ingDraft.mode === "existing" ? (
-          <select className="bk-input" value={ingDraft.item_id} onChange={(e) => setIngDraft({ ...ingDraft, item_id: e.target.value })}>
-            <option value="">Choose item…</option>
-            {items.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
-          </select>
+          <SearchableSelect
+            options={itemOptions}
+            value={ingDraft.item_id}
+            onChange={(v) => setIngDraft({ ...ingDraft, item_id: v })}
+            placeholder="Search items…"
+          />
         ) : (
           <input className="bk-input" placeholder="New ingredient name" value={ingDraft.newName} onChange={(e) => setIngDraft({ ...ingDraft, newName: e.target.value })} />
         )}

@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/useAuth";
 import { updateRecipe, deleteRecipe, replaceRecipeIngredients, insertItem } from "@/lib/db";
 import { recipeMetrics, healthClass, fmtMoney, fmtPct, costPerRecipeUnit, DEFAULT_GOALS, MENU_CATEGORIES } from "@/lib/costing";
-import { Pill, EmptyState } from "./ui";
+import { Pill, EmptyState, SearchableSelect } from "./ui";
 import PrepMethodTab from "./PrepMethodTab";
 import PrepSlideshow from "./PrepSlideshow";
 
@@ -62,6 +62,7 @@ export default function RecipeDetailPage({ recipeId, recipes, items, prices, set
   const target = recipe.category_tag === "Food" ? goals.target_food_cost_pct : goals.target_bar_cost_pct;
   const m = recipeMetrics(recipe, items, prices, recipes, settings);
   const set = (k, v) => setDraft((d) => ({ ...d, [k]: v }));
+  const itemOptions = [...items].sort((a, b) => a.name.localeCompare(b.name)).map((i) => ({ value: i.id, label: i.name }));
 
   async function saveField(field, value) {
     if (value === draft[field]) return;
@@ -230,10 +231,12 @@ export default function RecipeDetailPage({ recipeId, recipes, items, prices, set
                   <option value="new">New item</option>
                 </select>
                 {ingDraft.mode === "existing" ? (
-                  <select className="bk-input" value={ingDraft.item_id} onChange={(e) => setIngDraft({ ...ingDraft, item_id: e.target.value })}>
-                    <option value="">Choose item…</option>
-                    {items.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
-                  </select>
+                  <SearchableSelect
+                    options={itemOptions}
+                    value={ingDraft.item_id}
+                    onChange={(v) => setIngDraft({ ...ingDraft, item_id: v })}
+                    placeholder="Search items…"
+                  />
                 ) : (
                   <input className="bk-input" placeholder="New ingredient name" value={ingDraft.newName} onChange={(e) => setIngDraft({ ...ingDraft, newName: e.target.value })} />
                 )}

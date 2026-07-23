@@ -1,3 +1,7 @@
+"use client";
+
+import { useState } from "react";
+
 export function Pill({ tag }) {
   const cls = tag === "Food" ? "pill-food" : tag === "Bar" ? "pill-bar" : "pill-shared";
   return <span className={`bk-pill ${cls}`}>{tag}</span>;
@@ -54,5 +58,57 @@ export function Field({ label, children }) {
       <span>{label}</span>
       {children}
     </label>
+  );
+}
+
+// Type-to-search dropdown. `options` is [{ value, label }]; pass them
+// pre-sorted (callers control ordering, e.g. alphabetical).
+export function SearchableSelect({ options, value, onChange, placeholder }) {
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const selected = options.find((o) => o.value === value);
+  const filtered = query.trim()
+    ? options.filter((o) => o.label.toLowerCase().includes(query.trim().toLowerCase()))
+    : options;
+
+  return (
+    <div className="bk-searchable-select">
+      <input
+        className="bk-input"
+        placeholder={placeholder || "Search…"}
+        value={open ? query : selected?.label || ""}
+        onChange={(e) => {
+          setQuery(e.target.value);
+          setOpen(true);
+          if (value) onChange("");
+        }}
+        onFocus={() => {
+          setQuery("");
+          setOpen(true);
+        }}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+      />
+      {open && (
+        <div className="bk-searchable-select-menu">
+          {filtered.length === 0 ? (
+            <div className="bk-searchable-select-empty">No matches</div>
+          ) : (
+            filtered.map((o) => (
+              <div
+                key={o.value}
+                className="bk-searchable-select-option"
+                onMouseDown={() => {
+                  onChange(o.value);
+                  setQuery("");
+                  setOpen(false);
+                }}
+              >
+                {o.label}
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
   );
 }
