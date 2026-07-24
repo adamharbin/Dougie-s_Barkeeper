@@ -68,7 +68,7 @@ create table vendors (
 create table inventory_items (
   id uuid primary key default gen_random_uuid(),
   name text not null default '',
-  category_tag text not null default 'Food' check (category_tag in ('Food', 'Bar', 'Shared')),
+  category_tag text not null default 'Food' check (category_tag in ('Food', 'Bar', 'Shared', 'Supplies', 'Packaging')),
   par_level numeric,
   shelf_life_days numeric, -- null = no expiry (e.g. well vodka)
   on_hand_qty numeric, -- most recent physical count; null = never counted

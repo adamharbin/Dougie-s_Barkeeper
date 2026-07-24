@@ -191,6 +191,8 @@ export default function ItemModal({ item, prices, vendors, onClose, onSaved }) {
                 <option>Food</option>
                 <option>Bar</option>
                 <option>Shared</option>
+                <option>Supplies</option>
+                <option>Packaging</option>
               </select>
             </Field>
             <Field label="Par level (optional)">

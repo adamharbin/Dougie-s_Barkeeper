@@ -107,7 +107,7 @@ export default function InventoryTab({ items, prices, vendors, onSaved }) {
           <div className="bk-toolbar">
             <input className="bk-input" placeholder="Search inventory…" value={search} onChange={(e) => setSearch(e.target.value)} />
             <select className="bk-input" value={tagFilter} onChange={(e) => setTagFilter(e.target.value)}>
-              <option>All</option><option>Food</option><option>Bar</option><option>Shared</option>
+              <option>All</option><option>Food</option><option>Bar</option><option>Shared</option><option>Supplies</option><option>Packaging</option>
             </select>
             <select className="bk-input" value={menuCategoryFilter} onChange={(e) => setMenuCategoryFilter(e.target.value)}>
               <option value="All">All menu categories</option>

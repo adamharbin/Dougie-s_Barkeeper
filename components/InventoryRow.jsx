@@ -95,6 +95,8 @@ export default function InventoryRow({ item, items, prices, isAdmin, onSaved, on
           <option>Food</option>
           <option>Bar</option>
           <option>Shared</option>
+          <option>Supplies</option>
+          <option>Packaging</option>
         </select>
       </td>
       <td style={{ fontSize: 12.5 }}>{formatPurchaseUnitLabel(item)}</td>
