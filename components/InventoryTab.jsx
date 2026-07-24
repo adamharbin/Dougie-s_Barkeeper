@@ -127,16 +127,15 @@ export default function InventoryTab({ items, prices, vendors, onSaved }) {
           ) : (
             <>
               <p className="bk-disclaimer" style={{ marginTop: 0 }}>
-                Name, tag, recipe unit, par level, and shelf life save as you edit them. Logging a purchase or a new
-                on-hand count both write a real entry, same as the full Purchase History/Count screens. Purchase-unit
-                details (case size, pack qty, etc.) and full purchase history are set via Edit, since there&apos;s
-                more to them than fits in a cell.
+                Name, tag, recipe unit, par level, and shelf life save as you edit them. A new on-hand count writes a
+                real entry, same as the full Count screen. Purchase-unit details and logging/editing purchase history
+                are set via Edit.
               </p>
               <div style={{ overflowX: "auto" }}>
                 <table className="bk-table">
                   <thead>
                     <tr>
-                      <th>Name</th><th>Tag</th><th>Menu category</th><th>Purchase unit</th><th>Recipe unit</th><th>Log a purchase</th><th>Par level</th>
+                      <th>Name</th><th>Tag</th><th>Menu category</th><th>Purchase unit</th><th>Recipe unit</th><th>Avg cost</th><th>Par level</th>
                       <th>Shelf life (days)</th><th>On hand</th><th>On-hand value</th>
                       <th>Checked in</th><th>Est. expiration</th><th></th>
                     </tr>

@@ -1,10 +1,9 @@
 "use client";
 
 import { Fragment, useState } from "react";
-import { updateItem, insertPrice, saveInventoryCount } from "@/lib/db";
+import { updateItem, saveInventoryCount } from "@/lib/db";
 import {
   weightedAvgCost,
-  recipeUnitsPerPurchaseUnit,
   formatPurchaseUnitLabel,
   checkedInDate,
   estimatedExpiration,
@@ -27,8 +26,6 @@ export default function InventoryRow({ item, items, prices, isAdmin, onSaved, on
     shelf_life_days: item.shelf_life_days ?? "",
   });
   const [onHandDraft, setOnHandDraft] = useState("");
-  const [qtyPurchased, setQtyPurchased] = useState("");
-  const [costPerPurchaseUnit, setCostPerPurchaseUnit] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -38,7 +35,6 @@ export default function InventoryRow({ item, items, prices, isAdmin, onSaved, on
   const dLeft = exp ? daysUntil(exp) : null;
   const flag = dLeft != null && dLeft <= 3;
   const onHandVal = onHandValue(item, prices);
-  const snapshot = recipeUnitsPerPurchaseUnit(item);
 
   async function saveField(patch) {
     setSaving(true);
@@ -72,33 +68,6 @@ export default function InventoryRow({ item, items, prices, isAdmin, onSaved, on
     } catch (e) {
       console.error(e);
       setError("Couldn't save that count — try again.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function logCost() {
-    if (!qtyPurchased || !costPerPurchaseUnit || snapshot == null) return;
-    setSaving(true);
-    setError("");
-    try {
-      await insertPrice({
-        item_id: item.id,
-        purchase_unit: item.purchase_unit || "",
-        qty_purchased: qtyPurchased,
-        cost_per_purchase_unit: costPerPurchaseUnit,
-        recipe_units_per_purchase_unit_snapshot: snapshot,
-        vendor_id: null,
-        purchase_date: todayISO(),
-        checked_in_date: todayISO(),
-        source: "manual",
-      });
-      await onSaved();
-      setQtyPurchased("");
-      setCostPerPurchaseUnit("");
-    } catch (e) {
-      console.error(e);
-      setError("Couldn't log that purchase — try again.");
     } finally {
       setSaving(false);
     }
@@ -155,29 +124,8 @@ export default function InventoryRow({ item, items, prices, isAdmin, onSaved, on
           onBlur={() => saveField({ recipe_unit: draft.recipe_unit })}
         />
       </td>
-      <td style={{ minWidth: 220 }}>
-        {snapshot == null ? (
-          <span className="bk-needs-pricing">unit setup needed — click Edit</span>
-        ) : (
-          <>
-            <div className="bk-mini-form">
-              <div>
-                <div className="bk-mini-label">Qty purchased</div>
-                <input className="bk-input" type="number" value={qtyPurchased} onChange={(e) => setQtyPurchased(e.target.value)} />
-              </div>
-              <div>
-                <div className="bk-mini-label">Cost/{item.purchase_unit || "unit"}</div>
-                <input className="bk-input" type="number" value={costPerPurchaseUnit} onChange={(e) => setCostPerPurchaseUnit(e.target.value)} />
-              </div>
-            </div>
-            <button className="bk-mini-btn" style={{ marginTop: 5 }} disabled={!qtyPurchased || !costPerPurchaseUnit || saving} onClick={logCost}>
-              Log purchase
-            </button>
-          </>
-        )}
-        <div style={{ fontSize: 11.5, opacity: 0.75, marginTop: 5 }}>
-          {cost == null ? <span className="bk-needs-pricing">needs pricing</span> : `${fmtMoney(cost)} / ${item.recipe_unit || "unit"} avg`}
-        </div>
+      <td>
+        {cost == null ? <span className="bk-needs-pricing">needs pricing</span> : `${fmtMoney(cost)} / ${item.recipe_unit || "unit"}`}
       </td>
       <td>
         <input
