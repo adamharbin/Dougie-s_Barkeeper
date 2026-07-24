@@ -13,14 +13,12 @@ import {
   fmtMoney,
   fmtDate,
   todayISO,
-  MENU_CATEGORIES,
 } from "@/lib/costing";
 
 export default function InventoryRow({ item, items, prices, isAdmin, onSaved, onOpenEdit, onDelete }) {
   const [draft, setDraft] = useState({
     name: item.name,
     category_tag: item.category_tag,
-    menu_category: item.menu_category || "",
     recipe_unit: item.recipe_unit || "",
     par_level: item.par_level ?? "",
     shelf_life_days: item.shelf_life_days ?? "",
@@ -97,20 +95,6 @@ export default function InventoryRow({ item, items, prices, isAdmin, onSaved, on
           <option>Food</option>
           <option>Bar</option>
           <option>Shared</option>
-        </select>
-      </td>
-      <td>
-        <select
-          className="bk-input"
-          style={{ minWidth: 130 }}
-          value={draft.menu_category}
-          onChange={(e) => {
-            setDraft({ ...draft, menu_category: e.target.value });
-            saveField({ menu_category: e.target.value });
-          }}
-        >
-          <option value="">— Uncategorized —</option>
-          {MENU_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
       </td>
       <td style={{ fontSize: 12.5 }}>{formatPurchaseUnitLabel(item)}</td>
