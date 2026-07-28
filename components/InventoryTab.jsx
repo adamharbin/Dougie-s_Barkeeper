@@ -137,7 +137,7 @@ export default function InventoryTab({ items, prices, vendors, onSaved }) {
                 are set via Edit.
               </p>
               <div style={{ overflowX: "auto" }}>
-                <table className="bk-table">
+                <table className="bk-table bk-table-sticky-head">
                   <thead>
                     <tr>
                       <th>Name</th><th>Tag</th><th>Purchase unit</th><th>Recipe unit</th><th>Avg cost</th><th>Par level</th>

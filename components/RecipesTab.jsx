@@ -61,7 +61,7 @@ export default function RecipesTab({ recipes, items, prices, settings, onSaved }
       {filtered.length === 0 ? (
         <EmptyState text="No recipes yet — let's dig one up." sub={isAdmin ? "Add one, or upload a recipe to get started." : "Ask an admin to add one."} />
       ) : (
-        <table className="bk-table">
+        <table className="bk-table bk-table-sticky-head">
           <thead>
             <tr><th>Recipe</th><th>Tag</th><th>Menu category</th><th>Menu price</th><th>Labor cost</th><th>Food cost $</th><th>Food cost %</th><th>Prime cost $</th><th>Prime cost %</th><th></th></tr>
           </thead>

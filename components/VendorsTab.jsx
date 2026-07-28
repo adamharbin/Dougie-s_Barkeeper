@@ -34,7 +34,7 @@ export default function VendorsTab({ vendors, onSaved }) {
       {filtered.length === 0 ? (
         <EmptyState text="No vendors yet." sub="Add one to start linking purchases." />
       ) : (
-        <table className="bk-table">
+        <table className="bk-table bk-table-sticky-head">
           <thead><tr><th>Name</th><th>Contact</th><th>Order deadline</th><th>Delivery days</th><th>Supplies</th><th></th></tr></thead>
           <tbody>
             {filtered.map((v) => (

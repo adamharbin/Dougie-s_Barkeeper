@@ -500,6 +500,19 @@ textarea.bk-input {
   color: var(--cream);
   padding: 9px 10px;
 }
+/* Frozen header for the main Inventory/Vendors/Recipes tables. Nav is
+   sticky at top:0 (72px tall — 52px logo + 10px/10px padding), so the
+   header sticks just below it, not underneath it. overflow must be
+   visible here (.bk-table's overflow:hidden would otherwise block
+   position:sticky from tracking the page scroll). */
+.bk-table-sticky-head {
+  overflow: visible;
+}
+.bk-table-sticky-head thead th {
+  position: sticky;
+  top: 72px;
+  z-index: 5;
+}
 .bk-table td {
   padding: 9px 10px;
   border-bottom: 1px solid #efe8d8;
