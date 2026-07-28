@@ -500,17 +500,37 @@ textarea.bk-input {
   color: var(--cream);
   padding: 9px 10px;
 }
-/* Frozen header for the main Inventory/Vendors/Recipes tables. Nav is
-   sticky at top:0 (72px tall — 52px logo + 10px/10px padding), so the
-   header sticks just below it, not underneath it. overflow must be
-   visible here (.bk-table's overflow:hidden would otherwise block
-   position:sticky from tracking the page scroll). */
+/* Frozen header for tables with no horizontal-scroll wrapper (Vendors,
+   Recipes) — sticks relative to the page. Nav is sticky at top:0 (72px
+   tall — 52px logo + 10px/10px padding), so this offsets just below it.
+   overflow must be visible here (.bk-table's overflow:hidden would
+   otherwise block position:sticky from tracking the page scroll). */
 .bk-table-sticky-head {
   overflow: visible;
 }
 .bk-table-sticky-head thead th {
   position: sticky;
   top: 72px;
+  z-index: 5;
+}
+
+/* Inventory's table also needs horizontal scroll (many columns), and a
+   sticky thead inside a plain overflow-x:auto wrapper renders with visual
+   gaps/tearing on scroll (the wrapper becomes its own ambiguous scroll
+   context per the CSS overflow spec). Giving it a real bounded height
+   instead makes it a genuine self-contained scroll box — header sticks to
+   the top of THIS box (top:0), independent of page/Nav scroll math. */
+.bk-table-scroll-box {
+  overflow: auto;
+  max-height: 65vh;
+  border-radius: 10px;
+}
+.bk-table-scroll-box .bk-table {
+  overflow: visible;
+}
+.bk-table-scroll-box thead th {
+  position: sticky;
+  top: 0;
   z-index: 5;
 }
 .bk-table td {

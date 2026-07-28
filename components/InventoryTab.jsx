@@ -136,8 +136,8 @@ export default function InventoryTab({ items, prices, vendors, onSaved }) {
                 real entry, same as the full Count screen. Purchase-unit details and logging/editing purchase history
                 are set via Edit.
               </p>
-              <div style={{ overflowX: "auto" }}>
-                <table className="bk-table bk-table-sticky-head">
+              <div className="bk-table-scroll-box">
+                <table className="bk-table">
                   <thead>
                     <tr>
                       <th>Name</th><th>Tag</th><th>Purchase unit</th><th>Recipe unit</th><th>Avg cost</th><th>Par level</th>
