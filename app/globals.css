@@ -516,10 +516,6 @@ textarea.bk-input {
 .bk-row-flag td {
   background: rgba(227, 82, 5, 0.06);
 }
-.bk-expiring {
-  color: var(--orange);
-  font-weight: 600;
-}
 .bk-needs-pricing {
   color: var(--orange);
   font-style: italic;

@@ -5,9 +5,7 @@ import { updateItem, saveInventoryCount } from "@/lib/db";
 import {
   weightedAvgCost,
   formatPurchaseUnitLabel,
-  checkedInDate,
-  estimatedExpiration,
-  daysUntil,
+  latestPriceEntry,
   onHandValue,
   computeInventoryValuation,
   fmtMoney,
@@ -15,7 +13,7 @@ import {
   todayISO,
 } from "@/lib/costing";
 
-export default function InventoryRow({ item, items, prices, isAdmin, onSaved, onOpenEdit, onDelete }) {
+export default function InventoryRow({ item, items, prices, vendors, isAdmin, onSaved, onOpenEdit, onDelete }) {
   const [draft, setDraft] = useState({
     name: item.name,
     category_tag: item.category_tag,
@@ -28,10 +26,8 @@ export default function InventoryRow({ item, items, prices, isAdmin, onSaved, on
   const [error, setError] = useState("");
 
   const cost = weightedAvgCost(item.id, prices);
-  const checkedIn = checkedInDate(item.id, prices);
-  const exp = estimatedExpiration({ ...item, shelf_life_days: draft.shelf_life_days }, prices);
-  const dLeft = exp ? daysUntil(exp) : null;
-  const flag = dLeft != null && dLeft <= 3;
+  const lastPurchase = latestPriceEntry(item.id, prices);
+  const lastVendorName = lastPurchase?.vendor_id ? vendors.find((v) => v.id === lastPurchase.vendor_id)?.name : null;
   const onHandVal = onHandValue(item, prices);
 
   async function saveField(patch) {
@@ -73,7 +69,7 @@ export default function InventoryRow({ item, items, prices, isAdmin, onSaved, on
 
   return (
     <Fragment>
-    <tr className={flag ? "bk-row-flag" : ""}>
+    <tr>
       <td>
         <input
           className="bk-input"
@@ -145,8 +141,8 @@ export default function InventoryRow({ item, items, prices, isAdmin, onSaved, on
         />
       </td>
       <td>{onHandVal == null ? "—" : fmtMoney(onHandVal)}</td>
-      <td>{fmtDate(checkedIn)}</td>
-      <td className={flag ? "bk-expiring" : ""}>{exp ? `${fmtDate(exp)}${flag ? ` (${dLeft}d)` : ""}` : "—"}</td>
+      <td>{lastPurchase ? fmtDate(lastPurchase.purchase_date) : "—"}</td>
+      <td>{lastVendorName || "—"}</td>
       <td className="bk-row-actions">
         <button className="bk-link" onClick={() => onOpenEdit(item)}>Edit</button>
         {isAdmin && <button className="bk-link bk-link-danger" onClick={() => onDelete(item.id)}>Delete</button>}

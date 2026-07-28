@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useAuth } from "@/lib/useAuth";
 import { deleteItem } from "@/lib/db";
 import { downloadCSV } from "@/lib/csv";
-import { weightedAvgCost, checkedInDate, estimatedExpiration, daysUntil, onHandValue, formatPurchaseUnitLabel, fmtMoney, MENU_CATEGORIES } from "@/lib/costing";
+import { weightedAvgCost, latestPriceEntry, onHandValue, formatPurchaseUnitLabel, fmtMoney, MENU_CATEGORIES } from "@/lib/costing";
 import { SectionHead, EmptyState } from "./ui";
 import ItemModal from "./ItemModal";
 import UploadInvoiceModal from "./UploadInvoiceModal";
@@ -33,25 +33,23 @@ export default function InventoryTab({ items, prices, vendors, onSaved }) {
       const q = search.toLowerCase();
       list = list.filter((i) => i.name.toLowerCase().includes(q));
     }
-    const withCalc = list.map((i) => ({
-      ...i,
-      _cost: weightedAvgCost(i.id, prices),
-      _checkedIn: checkedInDate(i.id, prices),
-      _exp: estimatedExpiration(i, prices),
-      _onHandValue: onHandValue(i, prices),
-    }));
+    const withCalc = list.map((i) => {
+      const lastPurchase = latestPriceEntry(i.id, prices);
+      return {
+        ...i,
+        _cost: weightedAvgCost(i.id, prices),
+        _lastOrdered: lastPurchase?.purchase_date ?? null,
+        _lastVendorName: lastPurchase?.vendor_id ? vendors.find((v) => v.id === lastPurchase.vendor_id)?.name : null,
+        _onHandValue: onHandValue(i, prices),
+      };
+    });
     withCalc.sort((a, b) => {
       if (sortKey === "name") return a.name.localeCompare(b.name);
       if (sortKey === "cost") return (b._cost || 0) - (a._cost || 0);
-      if (sortKey === "expiring") {
-        const da = a._exp ? daysUntil(a._exp) : 9999;
-        const db = b._exp ? daysUntil(b._exp) : 9999;
-        return da - db;
-      }
       return 0;
     });
     return withCalc;
-  }, [items, prices, search, tagFilter, menuCategoryFilter, sortKey]);
+  }, [items, prices, vendors, search, tagFilter, menuCategoryFilter, sortKey]);
 
   const totalOnHandValue = filtered.reduce((s, i) => s + (i._onHandValue || 0), 0);
   const missingCount = filtered.filter((i) => i._onHandValue == null).length;
@@ -73,10 +71,10 @@ export default function InventoryTab({ items, prices, vendors, onSaved }) {
   }
 
   function exportCSV() {
-    const rows = [["Name", "Tag", "Menu category", "Purchase unit", "Recipe unit", "Weighted avg cost", "Par level", "Shelf life (days)", "On hand qty", "On hand value", "Checked in", "Est. expiration"]];
+    const rows = [["Name", "Tag", "Menu category", "Purchase unit", "Recipe unit", "Weighted avg cost", "Par level", "Shelf life (days)", "On hand qty", "On hand value", "Last ordered", "Last vendor"]];
     filtered.forEach((i) => rows.push([
       i.name, i.category_tag, i.menu_category ?? "", formatPurchaseUnitLabel(i), i.recipe_unit ?? "", i._cost ?? "",
-      i.par_level ?? "", i.shelf_life_days ?? "", i.on_hand_qty ?? "", i._onHandValue ?? "", i._checkedIn ?? "", i._exp ?? "",
+      i.par_level ?? "", i.shelf_life_days ?? "", i.on_hand_qty ?? "", i._onHandValue ?? "", i._lastOrdered ?? "", i._lastVendorName ?? "",
     ]));
     downloadCSV(rows, "barkeeper-inventory.csv");
   }
@@ -117,7 +115,6 @@ export default function InventoryTab({ items, prices, vendors, onSaved }) {
             <select className="bk-input" value={sortKey} onChange={(e) => setSortKey(e.target.value)}>
               <option value="name">Sort: Name</option>
               <option value="cost">Sort: Cost (high→low)</option>
-              <option value="expiring">Sort: Expiring soon</option>
             </select>
             <button className="bk-btn-secondary" onClick={exportCSV}>Export CSV</button>
           </div>
@@ -137,7 +134,7 @@ export default function InventoryTab({ items, prices, vendors, onSaved }) {
                     <tr>
                       <th>Name</th><th>Tag</th><th>Purchase unit</th><th>Recipe unit</th><th>Avg cost</th><th>Par level</th>
                       <th>Shelf life (days)</th><th>On hand</th><th>On-hand value</th>
-                      <th>Checked in</th><th>Est. expiration</th><th></th>
+                      <th>Last ordered</th><th>Last vendor</th><th></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -147,6 +144,7 @@ export default function InventoryTab({ items, prices, vendors, onSaved }) {
                         item={i}
                         items={items}
                         prices={prices}
+                        vendors={vendors}
                         isAdmin={isAdmin}
                         onSaved={onSaved}
                         onOpenEdit={setEditing}
@@ -180,9 +178,6 @@ export default function InventoryTab({ items, prices, vendors, onSaved }) {
           onSaved={onSaved}
         />
       )}
-      <p className="bk-disclaimer">
-        Estimated expirations are calculated from shelf-life settings, not a food-safety guarantee — always trust a manager&apos;s own check first.
-      </p>
     </div>
   );
 }
