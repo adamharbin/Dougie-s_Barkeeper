@@ -61,36 +61,38 @@ export default function RecipesTab({ recipes, items, prices, settings, onSaved }
       {filtered.length === 0 ? (
         <EmptyState text="No recipes yet — let's dig one up." sub={isAdmin ? "Add one, or upload a recipe to get started." : "Ask an admin to add one."} />
       ) : (
-        <table className="bk-table bk-table-sticky-head">
-          <thead>
-            <tr><th>Recipe</th><th>Tag</th><th>Menu category</th><th>Menu price</th><th>Labor cost</th><th>Food cost $</th><th>Food cost %</th><th>Prime cost $</th><th>Prime cost %</th><th></th></tr>
-          </thead>
-          <tbody>
-            {filtered.map((r) => {
-              const m = recipeMetrics(r, items, prices, recipes, settings);
-              const target = r.category_tag === "Food" ? goals.target_food_cost_pct : goals.target_bar_cost_pct;
-              return (
-                <tr key={r.id}>
-                  <td>{r.name} {m.hasUnpriced && <span className="bk-flag-tiny" title="Contains ingredients that need pricing">⚠</span>}</td>
-                  <td><Pill tag={r.category_tag} /></td>
-                  <td style={{ fontSize: 12.5 }}>{r.menu_category || "—"}</td>
-                  <td>{fmtMoney(r.menu_price)}</td>
-                  <td>{r.labor_minutes ? fmtMoney(m.labor) : <span className="bk-needs-pricing">no time set</span>}</td>
-                  <td>{fmtMoney(m.ingCost)}</td>
-                  <td className={healthClass(m.foodCostPct, target)}>{fmtPct(m.foodCostPct)}</td>
-                  <td>{fmtMoney(m.prime)}</td>
-                  <td className={healthClass(m.primeCostPct, goals.target_prime_cost_pct)}>{fmtPct(m.primeCostPct)}</td>
-                  <td className="bk-row-actions">
-                    <Link href={`/recipes/${r.id}`} className="bk-btn-primary bk-btn-compact">
-                      {isAdmin ? "View/Edit" : "View"}
-                    </Link>
-                    {isAdmin && <button className="bk-link bk-link-danger" onClick={() => handleDelete(r.id)}>Delete</button>}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        <div className="bk-table-scroll-box">
+          <table className="bk-table">
+            <thead>
+              <tr><th>Recipe</th><th>Tag</th><th>Menu category</th><th>Menu price</th><th>Labor cost</th><th>Food cost $</th><th>Food cost %</th><th>Prime cost $</th><th>Prime cost %</th><th></th></tr>
+            </thead>
+            <tbody>
+              {filtered.map((r) => {
+                const m = recipeMetrics(r, items, prices, recipes, settings);
+                const target = r.category_tag === "Food" ? goals.target_food_cost_pct : goals.target_bar_cost_pct;
+                return (
+                  <tr key={r.id}>
+                    <td>{r.name} {m.hasUnpriced && <span className="bk-flag-tiny" title="Contains ingredients that need pricing">⚠</span>}</td>
+                    <td><Pill tag={r.category_tag} /></td>
+                    <td style={{ fontSize: 12.5 }}>{r.menu_category || "—"}</td>
+                    <td>{fmtMoney(r.menu_price)}</td>
+                    <td>{r.labor_minutes ? fmtMoney(m.labor) : <span className="bk-needs-pricing">no time set</span>}</td>
+                    <td>{fmtMoney(m.ingCost)}</td>
+                    <td className={healthClass(m.foodCostPct, target)}>{fmtPct(m.foodCostPct)}</td>
+                    <td>{fmtMoney(m.prime)}</td>
+                    <td className={healthClass(m.primeCostPct, goals.target_prime_cost_pct)}>{fmtPct(m.primeCostPct)}</td>
+                    <td className="bk-row-actions">
+                      <Link href={`/recipes/${r.id}`} className="bk-btn-primary bk-btn-compact">
+                        {isAdmin ? "View/Edit" : "View"}
+                      </Link>
+                      {isAdmin && <button className="bk-link bk-link-danger" onClick={() => handleDelete(r.id)}>Delete</button>}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
       <p className="bk-disclaimer">
         Labor cost per recipe is labor time (minutes) × the hourly rate for its category (Food or Bar), set in Settings. Recipes with no labor time set are treated as $0 labor until it&apos;s added.
