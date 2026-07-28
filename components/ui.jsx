@@ -7,6 +7,13 @@ export function Pill({ tag }) {
   return <span className={`bk-pill ${cls}`}>{tag}</span>;
 }
 
+// Traffic-light stock-level badge. Expects the shape returned by
+// lib/costing.js's stockLevelStatus(): { status, label }.
+export function StockTag({ status, label }) {
+  const cls = { stocked: "stock-green", low: "stock-yellow", critical: "stock-red", no_par: "stock-neutral", not_counted: "stock-neutral" }[status] || "stock-neutral";
+  return <span className={`bk-stock-tag ${cls}`}>{label}</span>;
+}
+
 export function StatCard({ label, value, sub, tone }) {
   return (
     <div className={`bk-stat ${tone}`}>

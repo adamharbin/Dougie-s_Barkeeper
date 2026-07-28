@@ -8,10 +8,12 @@ import {
   latestPriceEntry,
   onHandValue,
   computeInventoryValuation,
+  stockLevelStatus,
   fmtMoney,
   fmtDate,
   todayISO,
 } from "@/lib/costing";
+import { StockTag } from "./ui";
 
 export default function InventoryRow({ item, items, prices, vendors, isAdmin, onSaved, onOpenEdit, onDelete }) {
   const [draft, setDraft] = useState({
@@ -19,7 +21,6 @@ export default function InventoryRow({ item, items, prices, vendors, isAdmin, on
     category_tag: item.category_tag,
     recipe_unit: item.recipe_unit || "",
     par_level: item.par_level ?? "",
-    shelf_life_days: item.shelf_life_days ?? "",
   });
   const [onHandDraft, setOnHandDraft] = useState("");
   const [saving, setSaving] = useState(false);
@@ -29,6 +30,10 @@ export default function InventoryRow({ item, items, prices, vendors, isAdmin, on
   const lastPurchase = latestPriceEntry(item.id, prices);
   const lastVendorName = lastPurchase?.vendor_id ? vendors.find((v) => v.id === lastPurchase.vendor_id)?.name : null;
   const onHandVal = onHandValue(item, prices);
+  const stock = stockLevelStatus({
+    on_hand_qty: onHandDraft !== "" ? onHandDraft : item.on_hand_qty,
+    par_level: draft.par_level,
+  });
 
   async function saveField(patch) {
     setSaving(true);
@@ -123,16 +128,6 @@ export default function InventoryRow({ item, items, prices, vendors, isAdmin, on
         <input
           className="bk-input"
           type="number"
-          style={{ width: 60 }}
-          value={draft.shelf_life_days}
-          onChange={(e) => setDraft({ ...draft, shelf_life_days: e.target.value })}
-          onBlur={() => saveField({ shelf_life_days: draft.shelf_life_days })}
-        />
-      </td>
-      <td>
-        <input
-          className="bk-input"
-          type="number"
           style={{ width: 70 }}
           placeholder={item.on_hand_qty != null ? String(item.on_hand_qty) : "not counted"}
           value={onHandDraft}
@@ -141,6 +136,7 @@ export default function InventoryRow({ item, items, prices, vendors, isAdmin, on
         />
       </td>
       <td>{onHandVal == null ? "—" : fmtMoney(onHandVal)}</td>
+      <td><StockTag status={stock.status} label={stock.label} /></td>
       <td>{lastPurchase ? fmtDate(lastPurchase.purchase_date) : "—"}</td>
       <td>{lastVendorName || "—"}</td>
       <td className="bk-row-actions">

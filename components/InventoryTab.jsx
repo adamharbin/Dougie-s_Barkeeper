@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useAuth } from "@/lib/useAuth";
 import { deleteItem } from "@/lib/db";
 import { downloadCSV } from "@/lib/csv";
-import { weightedAvgCost, latestPriceEntry, onHandValue, formatPurchaseUnitLabel, fmtMoney, MENU_CATEGORIES } from "@/lib/costing";
+import { weightedAvgCost, latestPriceEntry, onHandValue, stockLevelStatus, formatPurchaseUnitLabel, fmtMoney, MENU_CATEGORIES } from "@/lib/costing";
 import { SectionHead, EmptyState } from "./ui";
 import ItemModal from "./ItemModal";
 import UploadInvoiceModal from "./UploadInvoiceModal";
@@ -41,6 +41,7 @@ export default function InventoryTab({ items, prices, vendors, onSaved }) {
         _lastOrdered: lastPurchase?.purchase_date ?? null,
         _lastVendorName: lastPurchase?.vendor_id ? vendors.find((v) => v.id === lastPurchase.vendor_id)?.name : null,
         _onHandValue: onHandValue(i, prices),
+        _stockLabel: stockLevelStatus(i).label,
       };
     });
     withCalc.sort((a, b) => {
@@ -71,10 +72,10 @@ export default function InventoryTab({ items, prices, vendors, onSaved }) {
   }
 
   function exportCSV() {
-    const rows = [["Name", "Tag", "Menu category", "Purchase unit", "Recipe unit", "Weighted avg cost", "Par level", "Shelf life (days)", "On hand qty", "On hand value", "Last ordered", "Last vendor"]];
+    const rows = [["Name", "Tag", "Menu category", "Purchase unit", "Recipe unit", "Weighted avg cost", "Par level", "Shelf life (days)", "On hand qty", "On hand value", "Stock level", "Last ordered", "Last vendor"]];
     filtered.forEach((i) => rows.push([
       i.name, i.category_tag, i.menu_category ?? "", formatPurchaseUnitLabel(i), i.recipe_unit ?? "", i._cost ?? "",
-      i.par_level ?? "", i.shelf_life_days ?? "", i.on_hand_qty ?? "", i._onHandValue ?? "", i._lastOrdered ?? "", i._lastVendorName ?? "",
+      i.par_level ?? "", i.shelf_life_days ?? "", i.on_hand_qty ?? "", i._onHandValue ?? "", i._stockLabel, i._lastOrdered ?? "", i._lastVendorName ?? "",
     ]));
     downloadCSV(rows, "barkeeper-inventory.csv");
   }
@@ -133,7 +134,7 @@ export default function InventoryTab({ items, prices, vendors, onSaved }) {
                   <thead>
                     <tr>
                       <th>Name</th><th>Tag</th><th>Purchase unit</th><th>Recipe unit</th><th>Avg cost</th><th>Par level</th>
-                      <th>Shelf life (days)</th><th>On hand</th><th>On-hand value</th>
+                      <th>On hand</th><th>On-hand value</th><th>Stock level</th>
                       <th>Last ordered</th><th>Last vendor</th><th></th>
                     </tr>
                   </thead>

@@ -551,6 +551,33 @@ textarea.bk-input {
   color: #4d3600;
 }
 
+.bk-stock-tag {
+  font-family: var(--font-head);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.stock-green {
+  background: var(--mint);
+  color: var(--teal);
+}
+.stock-yellow {
+  background: var(--gold);
+  color: #4d3600;
+}
+.stock-red {
+  background: var(--orange);
+  color: #fff;
+}
+.stock-neutral {
+  background: #ece4d3;
+  color: #8a8072;
+}
+
 .bk-btn-primary,
 .bk-btn-secondary {
   font-family: var(--font-head);
