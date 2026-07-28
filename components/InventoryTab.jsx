@@ -12,6 +12,9 @@ import InventoryCountModal from "./InventoryCountModal";
 import CountHistory from "./CountHistory";
 import InventoryRow from "./InventoryRow";
 
+// Sort order for "Stock level" — most urgent first, unknowns last.
+const STOCK_SORT_RANK = { critical: 0, low: 1, stocked: 2, no_par: 3, not_counted: 4 };
+
 export default function InventoryTab({ items, prices, vendors, onSaved }) {
   const { isAdmin } = useAuth();
   const [view, setView] = useState("items"); // items | counts
@@ -35,18 +38,21 @@ export default function InventoryTab({ items, prices, vendors, onSaved }) {
     }
     const withCalc = list.map((i) => {
       const lastPurchase = latestPriceEntry(i.id, prices);
+      const stock = stockLevelStatus(i);
       return {
         ...i,
         _cost: weightedAvgCost(i.id, prices),
         _lastOrdered: lastPurchase?.purchase_date ?? null,
         _lastVendorName: lastPurchase?.vendor_id ? vendors.find((v) => v.id === lastPurchase.vendor_id)?.name : null,
         _onHandValue: onHandValue(i, prices),
-        _stockLabel: stockLevelStatus(i).label,
+        _stockStatus: stock.status,
+        _stockLabel: stock.label,
       };
     });
     withCalc.sort((a, b) => {
       if (sortKey === "name") return a.name.localeCompare(b.name);
       if (sortKey === "cost") return (b._cost || 0) - (a._cost || 0);
+      if (sortKey === "stock") return STOCK_SORT_RANK[a._stockStatus] - STOCK_SORT_RANK[b._stockStatus];
       return 0;
     });
     return withCalc;
@@ -116,6 +122,7 @@ export default function InventoryTab({ items, prices, vendors, onSaved }) {
             <select className="bk-input" value={sortKey} onChange={(e) => setSortKey(e.target.value)}>
               <option value="name">Sort: Name</option>
               <option value="cost">Sort: Cost (high→low)</option>
+              <option value="stock">Sort: Stock level (low first)</option>
             </select>
             <button className="bk-btn-secondary" onClick={exportCSV}>Export CSV</button>
           </div>

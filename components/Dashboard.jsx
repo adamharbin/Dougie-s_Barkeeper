@@ -12,7 +12,7 @@ import {
   recipeMetrics,
   healthClass,
 } from "@/lib/costing";
-import { Pill, StatCard, SectionHead, EmptyState, Modal } from "./ui";
+import { Pill, StatCard, SectionHead, EmptyState, Modal, StockTag } from "./ui";
 
 const ATTENTION_PREVIEW_LIMIT = 10;
 
@@ -33,8 +33,21 @@ function AttentionList({ expiring, stale }) {
   );
 }
 
-export default function Dashboard({ items, prices, recipes, settings, attention, onGo }) {
+function LowStockList({ lowStock }) {
+  return (
+    <ul className="bk-attention-list">
+      {lowStock.map(({ item, status, label }) => (
+        <li key={item.id} className={status === "critical" ? "bk-attn-orange" : "bk-attn-gold"}>
+          <StockTag status={status} label={label} /> <strong>{item.name}</strong> — {item.on_hand_qty ?? 0} / {item.par_level} {item.recipe_unit || "unit"}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+export default function Dashboard({ items, prices, recipes, settings, attention, lowStock, onGo }) {
   const [showAllAttention, setShowAllAttention] = useState(false);
+  const [showAllLowStock, setShowAllLowStock] = useState(false);
   const foodRecipes = recipes.filter((r) => r.category_tag === "Food");
   const barRecipes = recipes.filter((r) => r.category_tag === "Bar");
 
@@ -164,31 +177,58 @@ export default function Dashboard({ items, prices, recipes, settings, attention,
         Margin here is menu price minus ingredient cost (labor share not included). Recipes with unpriced ingredients or no menu price are left out until they&apos;re fully costed.
       </p>
 
-      <div className="bk-card">
-        <div className="bk-card-head">
-          <h4>Needs attention</h4>
-          <button className="bk-link" onClick={() => onGo("inventory")}>Open inventory →</button>
+      <div className="bk-two-col">
+        <div className="bk-card">
+          <div className="bk-card-head">
+            <h4>Needs attention</h4>
+            <button className="bk-link" onClick={() => onGo("inventory")}>Open inventory →</button>
+          </div>
+          {attention.stale.length === 0 && attention.expiring.length === 0 ? (
+            <EmptyState text="Nothing needs a look right now." sub="Good boy, BarKeeper." />
+          ) : (
+            <>
+              <AttentionList
+                expiring={attention.expiring.slice(0, ATTENTION_PREVIEW_LIMIT)}
+                stale={attention.stale.slice(0, Math.max(0, ATTENTION_PREVIEW_LIMIT - attention.expiring.length))}
+              />
+              {attention.expiring.length + attention.stale.length > ATTENTION_PREVIEW_LIMIT && (
+                <button className="bk-link" style={{ marginTop: 8 }} onClick={() => setShowAllAttention(true)}>
+                  View more ({attention.expiring.length + attention.stale.length - ATTENTION_PREVIEW_LIMIT} more) →
+                </button>
+              )}
+            </>
+          )}
         </div>
-        {attention.stale.length === 0 && attention.expiring.length === 0 ? (
-          <EmptyState text="Nothing needs a look right now." sub="Good boy, BarKeeper." />
-        ) : (
-          <>
-            <AttentionList
-              expiring={attention.expiring.slice(0, ATTENTION_PREVIEW_LIMIT)}
-              stale={attention.stale.slice(0, Math.max(0, ATTENTION_PREVIEW_LIMIT - attention.expiring.length))}
-            />
-            {attention.expiring.length + attention.stale.length > ATTENTION_PREVIEW_LIMIT && (
-              <button className="bk-link" style={{ marginTop: 8 }} onClick={() => setShowAllAttention(true)}>
-                View more ({attention.expiring.length + attention.stale.length - ATTENTION_PREVIEW_LIMIT} more) →
-              </button>
-            )}
-          </>
-        )}
+
+        <div className="bk-card">
+          <div className="bk-card-head">
+            <h4>Needs to order</h4>
+            <button className="bk-link" onClick={() => onGo("inventory")}>Open inventory →</button>
+          </div>
+          {lowStock.length === 0 ? (
+            <EmptyState text="Everything's stocked." sub="Nothing below par right now." />
+          ) : (
+            <>
+              <LowStockList lowStock={lowStock.slice(0, ATTENTION_PREVIEW_LIMIT)} />
+              {lowStock.length > ATTENTION_PREVIEW_LIMIT && (
+                <button className="bk-link" style={{ marginTop: 8 }} onClick={() => setShowAllLowStock(true)}>
+                  View more ({lowStock.length - ATTENTION_PREVIEW_LIMIT} more) →
+                </button>
+              )}
+            </>
+          )}
+        </div>
       </div>
 
       {showAllAttention && (
         <Modal title="Needs attention — full list" onClose={() => setShowAllAttention(false)}>
           <AttentionList expiring={attention.expiring} stale={attention.stale} />
+        </Modal>
+      )}
+
+      {showAllLowStock && (
+        <Modal title="Needs to order — full list" onClose={() => setShowAllLowStock(false)}>
+          <LowStockList lowStock={lowStock} />
         </Modal>
       )}
 

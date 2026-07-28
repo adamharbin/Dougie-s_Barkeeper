@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/useAuth";
 import { loadAll } from "@/lib/db";
-import { isStalePrice, estimatedExpiration, daysUntil } from "@/lib/costing";
+import { isStalePrice, estimatedExpiration, daysUntil, stockLevelStatus } from "@/lib/costing";
 import Nav from "./Nav";
 import Dashboard from "./Dashboard";
 import InventoryTab from "./InventoryTab";
@@ -62,6 +62,16 @@ export default function AppShell() {
     return { stale, expiring };
   }, [data]);
 
+  // Items below par (or getting close), most urgent first — for the
+  // Dashboard's "Needs to order" widget.
+  const lowStock = useMemo(() => {
+    if (!data) return [];
+    return data.items
+      .map((item) => ({ item, ...stockLevelStatus(item) }))
+      .filter((x) => x.status === "critical" || x.status === "low")
+      .sort((a, b) => (a.status === b.status ? 0 : a.status === "critical" ? -1 : 1));
+  }, [data]);
+
   return (
     <div className="bk-app">
       <Nav tab={tab} onTabChange={setTab} />
@@ -80,6 +90,7 @@ export default function AppShell() {
             recipes={data.recipes}
             settings={data.settings}
             attention={attention}
+            lowStock={lowStock}
             onGo={setTab}
           />
         ) : tab === "inventory" ? (
