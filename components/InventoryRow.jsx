@@ -3,7 +3,6 @@
 import { Fragment, useState } from "react";
 import { updateItem, saveInventoryCount } from "@/lib/db";
 import {
-  weightedAvgCost,
   formatPurchaseUnitLabel,
   latestPriceEntry,
   onHandValue,
@@ -26,7 +25,6 @@ export default function InventoryRow({ item, items, prices, vendors, isAdmin, on
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  const cost = weightedAvgCost(item.id, prices);
   const lastPurchase = latestPriceEntry(item.id, prices);
   const lastVendorName = lastPurchase?.vendor_id ? vendors.find((v) => v.id === lastPurchase.vendor_id)?.name : null;
   const onHandVal = onHandValue(item, prices);
@@ -110,9 +108,6 @@ export default function InventoryRow({ item, items, prices, vendors, isAdmin, on
           onChange={(e) => setDraft({ ...draft, recipe_unit: e.target.value })}
           onBlur={() => saveField({ recipe_unit: draft.recipe_unit })}
         />
-      </td>
-      <td>
-        {cost == null ? <span className="bk-needs-pricing">needs pricing</span> : `${fmtMoney(cost)} / ${item.recipe_unit || "unit"}`}
       </td>
       <td>
         <input
