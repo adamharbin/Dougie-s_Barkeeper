@@ -65,7 +65,6 @@ export default function RecipeDetailPage({ recipeId, recipes, items, prices, set
   const itemOptions = [...items].sort((a, b) => a.name.localeCompare(b.name)).map((i) => ({ value: i.id, label: i.name }));
 
   async function saveField(field, value) {
-    if (value === draft[field]) return;
     setError("");
     try {
       await updateRecipe(recipe.id, { ...draft, [field]: value });
