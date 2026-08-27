@@ -98,7 +98,7 @@ export default function RecipeModal({ items, prices, settings, onClose, onSaved 
             <option>Bar</option>
           </select>
         </Field>
-        <Field label="Yield"><input className="bk-input" value={form.yield} onChange={(e) => set("yield", e.target.value)} placeholder="e.g. 24 wings" /></Field>
+        <Field label="Yield (servings this makes — leave blank or 1 if priced as a whole order)"><input className="bk-input" type="number" value={form.batch_yield_qty} onChange={(e) => set("batch_yield_qty", e.target.value)} placeholder="e.g. 12" /></Field>
         <Field label="Menu price"><input className="bk-input" type="number" value={form.menu_price} onChange={(e) => set("menu_price", e.target.value)} /></Field>
       </div>
       <Field label="Menu category">
@@ -118,9 +118,6 @@ export default function RecipeModal({ items, prices, settings, onClose, onSaved 
           </div>
         </div>
       </div>
-      <Field label="Batch yield (servings this makes — leave blank unless this recipe's ingredients are for a whole batch, not one order)">
-        <input className="bk-input" type="number" value={form.batch_yield_qty} onChange={(e) => set("batch_yield_qty", e.target.value)} placeholder="e.g. 12" />
-      </Field>
       <Field label="Prep notes">
         <textarea className="bk-input" rows={2} value={form.prep_notes} onChange={(e) => set("prep_notes", e.target.value)} />
       </Field>

@@ -173,8 +173,8 @@ export default function RecipeDetailPage({ recipeId, recipes, items, prices, set
                 </select>
               </div>
               <div className="bk-field">
-                <span>Yield</span>
-                <input className="bk-input" disabled={!isAdmin} value={draft.yield} onChange={(e) => set("yield", e.target.value)} onBlur={(e) => saveField("yield", e.target.value)} placeholder="e.g. 24 wings" />
+                <span>Yield (servings this recipe makes — leave blank or 1 if it&apos;s priced as a whole order, e.g. 6 wings)</span>
+                <input className="bk-input" type="number" disabled={!isAdmin} value={draft.batch_yield_qty} onChange={(e) => set("batch_yield_qty", e.target.value)} onBlur={(e) => saveField("batch_yield_qty", e.target.value)} placeholder="e.g. 12" />
               </div>
             </div>
             <div className="bk-form-row">
@@ -186,10 +186,6 @@ export default function RecipeDetailPage({ recipeId, recipes, items, prices, set
                 <span>Labor time (minutes)</span>
                 <input className="bk-input" type="number" disabled={!isAdmin} value={draft.labor_minutes} onChange={(e) => set("labor_minutes", e.target.value)} onBlur={(e) => saveField("labor_minutes", e.target.value)} />
               </div>
-            </div>
-            <div className="bk-field">
-              <span>Batch yield (servings this makes — leave blank unless this recipe&apos;s ingredients are for a whole batch, not one order)</span>
-              <input className="bk-input" type="number" disabled={!isAdmin} value={draft.batch_yield_qty} onChange={(e) => set("batch_yield_qty", e.target.value)} onBlur={(e) => saveField("batch_yield_qty", e.target.value)} placeholder="e.g. 12" />
             </div>
             <div className="bk-field">
               <span>Prep notes</span>
