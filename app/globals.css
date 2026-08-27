@@ -541,6 +541,13 @@ textarea.bk-input {
 .bk-table tbody tr:hover {
   background: #faf6ec;
 }
+.bk-table-avg-row td {
+  background: #f4efe3;
+  font-weight: 600;
+  color: var(--teal);
+  border-top: 2px solid #d8cdb5;
+  border-bottom: none;
+}
 .bk-table-compact th,
 .bk-table-compact td {
   padding: 6px 8px;

@@ -27,6 +27,23 @@ export default function RecipesTab({ recipes, items, prices, settings, onSaved }
     return list;
   }, [recipes, search, tagFilter, menuCategoryFilter]);
 
+  const withMetrics = useMemo(
+    () => filtered.map((r) => ({ r, m: recipeMetrics(r, items, prices, recipes, settings) })),
+    [filtered, items, prices, recipes, settings]
+  );
+
+  // Skip nulls/blanks per metric rather than treating missing data as 0 —
+  // averages only reflect recipes that actually have that number.
+  const avg = (nums) => {
+    const valid = nums.filter((n) => n != null && !isNaN(n));
+    return valid.length ? valid.reduce((a, b) => a + b, 0) / valid.length : null;
+  };
+  const avgMenuPrice = avg(withMetrics.map(({ r }) => (r.menu_price === "" || r.menu_price == null ? null : Number(r.menu_price))));
+  const avgFoodCostDollar = avg(withMetrics.map(({ m }) => m.ingCost));
+  const avgFoodCostPct = avg(withMetrics.map(({ m }) => m.foodCostPct));
+  const avgPrimeCostDollar = avg(withMetrics.map(({ m }) => m.prime));
+  const avgPrimeCostPct = avg(withMetrics.map(({ m }) => m.primeCostPct));
+
   async function handleDelete(id) {
     if (!isAdmin) return;
     if (!confirm("Delete this recipe?")) return;
@@ -67,8 +84,7 @@ export default function RecipesTab({ recipes, items, prices, settings, onSaved }
               <tr><th>Recipe</th><th>Tag</th><th>Menu category</th><th>Menu price</th><th>Labor cost</th><th>Food cost $</th><th>Food cost %</th><th>Prime cost $</th><th>Prime cost %</th><th></th></tr>
             </thead>
             <tbody>
-              {filtered.map((r) => {
-                const m = recipeMetrics(r, items, prices, recipes, settings);
+              {withMetrics.map(({ r, m }) => {
                 const target = r.category_tag === "Food" ? goals.target_food_cost_pct : goals.target_bar_cost_pct;
                 return (
                   <tr key={r.id}>
@@ -91,6 +107,18 @@ export default function RecipesTab({ recipes, items, prices, settings, onSaved }
                 );
               })}
             </tbody>
+            <tfoot>
+              <tr className="bk-table-avg-row">
+                <td colSpan={3}>Average ({withMetrics.length} recipe{withMetrics.length === 1 ? "" : "s"})</td>
+                <td>{avgMenuPrice == null ? "—" : fmtMoney(avgMenuPrice)}</td>
+                <td>—</td>
+                <td>{avgFoodCostDollar == null ? "—" : fmtMoney(avgFoodCostDollar)}</td>
+                <td>{avgFoodCostPct == null ? "—" : fmtPct(avgFoodCostPct)}</td>
+                <td>{avgPrimeCostDollar == null ? "—" : fmtMoney(avgPrimeCostDollar)}</td>
+                <td>{avgPrimeCostPct == null ? "—" : fmtPct(avgPrimeCostPct)}</td>
+                <td></td>
+              </tr>
+            </tfoot>
           </table>
         </div>
       )}
