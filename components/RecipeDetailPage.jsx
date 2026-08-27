@@ -43,6 +43,7 @@ export default function RecipeDetailPage({ recipeId, recipes, items, prices, set
           yield: recipe.yield || "",
           menu_price: recipe.menu_price ?? "",
           labor_minutes: recipe.labor_minutes ?? "",
+          batch_yield_qty: recipe.batch_yield_qty ?? "",
           prep_notes: recipe.prep_notes || "",
         }
       : null
@@ -185,6 +186,10 @@ export default function RecipeDetailPage({ recipeId, recipes, items, prices, set
                 <span>Labor time (minutes)</span>
                 <input className="bk-input" type="number" disabled={!isAdmin} value={draft.labor_minutes} onChange={(e) => set("labor_minutes", e.target.value)} onBlur={(e) => saveField("labor_minutes", e.target.value)} />
               </div>
+            </div>
+            <div className="bk-field">
+              <span>Batch yield (servings this makes — leave blank unless this recipe&apos;s ingredients are for a whole batch, not one order)</span>
+              <input className="bk-input" type="number" disabled={!isAdmin} value={draft.batch_yield_qty} onChange={(e) => set("batch_yield_qty", e.target.value)} onBlur={(e) => saveField("batch_yield_qty", e.target.value)} placeholder="e.g. 12" />
             </div>
             <div className="bk-field">
               <span>Prep notes</span>

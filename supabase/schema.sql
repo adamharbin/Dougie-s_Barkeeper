@@ -106,6 +106,10 @@ create table recipes (
   yield text, -- free text (e.g. "24 wings", "1 batch") not a strict count
   menu_price numeric,
   labor_minutes numeric, -- null/0 = "no time set", never estimated
+  batch_yield_qty numeric, -- null/0 = "not a batch recipe" (ingredients already
+    -- total to one priced order, e.g. "6 wings"). When set, this recipe's
+    -- ingredient list totals a BATCH that makes this many servings, and
+    -- food/labor/prime cost are divided by it to get a per-serving cost.
   prep_notes text default '',
   menu_category text, -- e.g. "Flatbreads", "Salads" — see lib/costing.js MENU_CATEGORIES
   created_at timestamptz default now()

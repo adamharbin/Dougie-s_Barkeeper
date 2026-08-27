@@ -14,7 +14,7 @@ function blankDraft() {
 // (/recipes/[id]), not in this modal.
 export default function RecipeModal({ items, prices, settings, onClose, onSaved }) {
   const router = useRouter();
-  const [form, setForm] = useState({ name: "", category_tag: "Food", menu_category: "", yield: "", menu_price: "", labor_minutes: "", prep_notes: "", ingredients: [] });
+  const [form, setForm] = useState({ name: "", category_tag: "Food", menu_category: "", yield: "", menu_price: "", labor_minutes: "", batch_yield_qty: "", prep_notes: "", ingredients: [] });
   const [ingDraft, setIngDraft] = useState(blankDraft());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -118,6 +118,9 @@ export default function RecipeModal({ items, prices, settings, onClose, onSaved 
           </div>
         </div>
       </div>
+      <Field label="Batch yield (servings this makes — leave blank unless this recipe's ingredients are for a whole batch, not one order)">
+        <input className="bk-input" type="number" value={form.batch_yield_qty} onChange={(e) => set("batch_yield_qty", e.target.value)} placeholder="e.g. 12" />
+      </Field>
       <Field label="Prep notes">
         <textarea className="bk-input" rows={2} value={form.prep_notes} onChange={(e) => set("prep_notes", e.target.value)} />
       </Field>
