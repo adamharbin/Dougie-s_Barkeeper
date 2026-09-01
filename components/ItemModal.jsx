@@ -50,6 +50,7 @@ function blankPriceForm(item) {
     purchase_unit: item.purchase_unit || "",
     qty_purchased: "",
     cost_per_purchase_unit: "",
+    product_url: "",
   };
 }
 
@@ -61,6 +62,7 @@ function priceFormFromEntry(entry) {
     purchase_unit: entry.purchase_unit || "",
     qty_purchased: String(entry.qty_purchased ?? ""),
     cost_per_purchase_unit: String(entry.cost_per_purchase_unit ?? ""),
+    product_url: entry.product_url || "",
   };
 }
 
@@ -303,12 +305,12 @@ export default function ItemModal({ item, prices, vendors, onClose, onSaved }) {
             <thead>
               <tr>
                 <th>Date</th><th>Vendor</th><th>Purchase</th><th>Received</th>
-                <th>Cost/purchase unit</th><th>Total cost</th><th>Cost/recipe unit</th><th>Checked in</th><th></th>
+                <th>Cost/purchase unit</th><th>Total cost</th><th>Cost/recipe unit</th><th>Checked in</th><th>Link</th><th></th>
               </tr>
             </thead>
             <tbody>
               {itemPrices.length === 0 && (
-                <tr><td colSpan={9}><EmptyState text="No purchases logged yet." /></td></tr>
+                <tr><td colSpan={10}><EmptyState text="No purchases logged yet." /></td></tr>
               )}
               {[...itemPrices].sort((a, b) => new Date(b.purchase_date) - new Date(a.purchase_date)).map((e) => (
                 <tr key={e.id} className={editingPriceId === e.id ? "bk-row-flag" : ""}>
@@ -320,6 +322,11 @@ export default function ItemModal({ item, prices, vendors, onClose, onSaved }) {
                   <td>{fmtMoney((e.cost_per_purchase_unit || 0) * (e.qty_purchased || 0))}</td>
                   <td>{fmtMoney(e.cost)}</td>
                   <td>{fmtDate(e.checked_in_date)}</td>
+                  <td>
+                    {e.product_url ? (
+                      <a className="bk-link" href={e.product_url} target="_blank" rel="noopener noreferrer">View</a>
+                    ) : "—"}
+                  </td>
                   <td className="bk-row-actions">
                     {isAdmin && <button className="bk-link" onClick={() => startEditPrice(e)}>Edit</button>}
                     {isAdmin && <button className="bk-link bk-link-danger" onClick={() => removePrice(e.id)}>Remove</button>}
@@ -344,6 +351,7 @@ export default function ItemModal({ item, prices, vendors, onClose, onSaved }) {
             <input className="bk-input" type="number" placeholder="Qty purchased" value={priceForm.qty_purchased} onChange={(e) => setPriceForm({ ...priceForm, qty_purchased: e.target.value })} />
             <input className="bk-input" type="number" placeholder="Cost/purchase unit" value={priceForm.cost_per_purchase_unit} onChange={(e) => setPriceForm({ ...priceForm, cost_per_purchase_unit: e.target.value })} />
             <input className="bk-input" type="date" value={priceForm.checked_in_date} onChange={(e) => setPriceForm({ ...priceForm, checked_in_date: e.target.value })} title="Checked-in date" />
+            <input className="bk-input" type="url" placeholder="Product page URL (optional)" value={priceForm.product_url} onChange={(e) => setPriceForm({ ...priceForm, product_url: e.target.value })} style={{ minWidth: 200 }} />
             <div className="bk-field" style={{ minWidth: 100 }}>
               <span>Total cost</span>
               <div className="bk-computed-value">{fmtMoney(totalCost)}</div>

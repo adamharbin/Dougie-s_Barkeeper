@@ -1100,3 +1100,23 @@ textarea.bk-input {
   min-width: 60px;
   text-align: center;
 }
+
+/* ---- Print-a-single-section (reports) ---- */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #bk-low-stock-print-area,
+  #bk-low-stock-print-area * {
+    visibility: visible;
+  }
+  #bk-low-stock-print-area {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+  }
+  .bk-no-print {
+    display: none !important;
+  }
+}

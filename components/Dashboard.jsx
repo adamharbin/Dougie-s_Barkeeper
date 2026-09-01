@@ -13,6 +13,7 @@ import {
   healthClass,
 } from "@/lib/costing";
 import { Pill, StatCard, SectionHead, EmptyState, Modal, StockTag } from "./ui";
+import LowStockReport from "./LowStockReport";
 
 const ATTENTION_PREVIEW_LIMIT = 10;
 
@@ -45,9 +46,10 @@ function LowStockList({ lowStock }) {
   );
 }
 
-export default function Dashboard({ items, prices, recipes, settings, attention, lowStock, onGo }) {
+export default function Dashboard({ items, prices, recipes, settings, attention, lowStock, vendors, onGo }) {
   const [showAllAttention, setShowAllAttention] = useState(false);
   const [showAllLowStock, setShowAllLowStock] = useState(false);
+  const [showLowStockReport, setShowLowStockReport] = useState(false);
   const foodRecipes = recipes.filter((r) => r.category_tag === "Food");
   const barRecipes = recipes.filter((r) => r.category_tag === "Bar");
 
@@ -57,15 +59,17 @@ export default function Dashboard({ items, prices, recipes, settings, attention,
     return vals.reduce((a, b) => a + b, 0) / vals.length;
   };
 
+  const naBeverageRecipes = recipes.filter((r) => r.menu_category === "Beverages");
+
   const foodCostPct = avgPct(foodRecipes, "foodCostPct");
   const barCostPct = avgPct(barRecipes, "foodCostPct");
+  const naBeverageCostPct = avgPct(naBeverageRecipes, "foodCostPct");
 
   const ingredientTotal = recipes.reduce((s, r) => s + recipeIngredientCost(r, items, prices).total, 0);
   const laborTotal = recipes.reduce((s, r) => s + recipeLaborCost(r, settings), 0);
   const primeCostTotal = laborTotal + ingredientTotal;
   const menuValueTotal = recipes.reduce((s, r) => s + Number(r.menu_price || 0), 0);
   const primeCostPctOfSales = menuValueTotal ? (primeCostTotal / menuValueTotal) * 100 : null;
-  const recipesMissingTime = recipes.filter((r) => !r.labor_minutes).length;
 
   const goals = settings.goals || DEFAULT_GOALS;
 
@@ -105,9 +109,9 @@ export default function Dashboard({ items, prices, recipes, settings, attention,
           tone={healthClass(barCostPct, goals.target_bar_cost_pct)}
         />
         <StatCard
-          label="Prime cost $"
-          value={fmtMoney(primeCostTotal)}
-          sub={recipesMissingTime ? `${recipesMissingTime} recipe${recipesMissingTime === 1 ? "" : "s"} missing labor time — add it for an accurate number` : "Ingredient cost + labor time × hourly rate, all recipes"}
+          label="N/A Beverage cost %"
+          value={fmtPct(naBeverageCostPct)}
+          sub={`avg across ${naBeverageRecipes.length} beverage recipe${naBeverageRecipes.length === 1 ? "" : "s"}`}
           tone="stat-neutral"
         />
         <StatCard
@@ -203,7 +207,10 @@ export default function Dashboard({ items, prices, recipes, settings, attention,
         <div className="bk-card">
           <div className="bk-card-head">
             <h4>Needs to order</h4>
-            <button className="bk-link" onClick={() => onGo("inventory")}>Open inventory →</button>
+            <div className="bk-action-group">
+              {lowStock.length > 0 && <button className="bk-link" onClick={() => setShowLowStockReport(true)}>Report →</button>}
+              <button className="bk-link" onClick={() => onGo("inventory")}>Open inventory →</button>
+            </div>
           </div>
           {lowStock.length === 0 ? (
             <EmptyState text="Everything's stocked." sub="Nothing below par right now." />
@@ -230,6 +237,10 @@ export default function Dashboard({ items, prices, recipes, settings, attention,
         <Modal title="Needs to order — full list" onClose={() => setShowAllLowStock(false)}>
           <LowStockList lowStock={lowStock} />
         </Modal>
+      )}
+
+      {showLowStockReport && (
+        <LowStockReport lowStock={lowStock} prices={prices} vendors={vendors} onClose={() => setShowLowStockReport(false)} />
       )}
 
       <div className="bk-card">

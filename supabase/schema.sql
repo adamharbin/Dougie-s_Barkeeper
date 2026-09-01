@@ -96,6 +96,7 @@ create table inventory_prices (
   purchase_date date default current_date,
   checked_in_date date default current_date,
   source text default 'manual' check (source in ('manual', 'upload')),
+  product_url text, -- optional link to the vendor's product page, for quick reference
   created_at timestamptz default now()
 );
 
@@ -138,6 +139,23 @@ create table recipe_steps (
   image_url text,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
+);
+
+-- Invoice library: a document archive, not linked to specific purchase-log
+-- rows (this app has no invoice OCR/parsing). file_path points into the
+-- private "invoices" Storage bucket -- always fetched via a fresh signed
+-- URL (see lib/db.js), never a stored public URL, since invoices can carry
+-- real pricing/business info.
+create table invoices (
+  id uuid primary key default gen_random_uuid(),
+  vendor_id uuid references vendors(id) on delete set null,
+  invoice_date date default current_date,
+  total_amount numeric,
+  notes text default '',
+  file_path text not null,
+  file_name text default '',
+  uploaded_by uuid references profiles(id),
+  created_at timestamptz default now()
 );
 
 create table goal_settings (
@@ -198,6 +216,7 @@ alter table inventory_prices enable row level security;
 alter table recipes enable row level security;
 alter table recipe_ingredients enable row level security;
 alter table recipe_steps enable row level security;
+alter table invoices enable row level security;
 alter table goal_settings enable row level security;
 alter table uploads enable row level security;
 alter table inventory_counts enable row level security;
@@ -249,6 +268,14 @@ create policy "recipe_steps insert" on recipe_steps for insert with check (publi
 create policy "recipe_steps update" on recipe_steps for update using (public.is_admin());
 create policy "recipe_steps delete" on recipe_steps for delete using (public.is_admin());
 
+-- invoices: view + upload = any signed-in user (matches the existing
+-- "upload an invoice" / "log a purchase" level). Edit/delete = admin only,
+-- same conservative default as inventory_prices.
+create policy "invoices select" on invoices for select using (auth.uid() is not null);
+create policy "invoices insert" on invoices for insert with check (auth.uid() is not null);
+create policy "invoices update" on invoices for update using (public.is_admin());
+create policy "invoices delete" on invoices for delete using (public.is_admin());
+
 -- goal_settings: view = any signed-in user. Edit = admin only.
 create policy "goals select" on goal_settings for select using (auth.uid() is not null);
 create policy "goals update" on goal_settings for update using (public.is_admin());
@@ -286,3 +313,21 @@ create policy "recipe step images update" on storage.objects for update
   using (bucket_id = 'recipe-step-images' and public.is_admin());
 create policy "recipe step images delete" on storage.objects for delete
   using (bucket_id = 'recipe-step-images' and public.is_admin());
+
+-- Invoice library files: PRIVATE bucket (invoices can carry real pricing/
+-- business info, unlike recipe photos) — every read goes through a
+-- short-lived signed URL generated at request time, never a public link.
+-- Any signed-in user can view/upload (matches the invoices table RLS
+-- above); only admins can replace/delete.
+insert into storage.buckets (id, name, public)
+values ('invoices', 'invoices', false)
+on conflict (id) do nothing;
+
+create policy "invoice files select" on storage.objects for select
+  using (bucket_id = 'invoices' and auth.uid() is not null);
+create policy "invoice files insert" on storage.objects for insert
+  with check (bucket_id = 'invoices' and auth.uid() is not null);
+create policy "invoice files update" on storage.objects for update
+  using (bucket_id = 'invoices' and public.is_admin());
+create policy "invoice files delete" on storage.objects for delete
+  using (bucket_id = 'invoices' and public.is_admin());
