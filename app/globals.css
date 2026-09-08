@@ -514,6 +514,24 @@ textarea.bk-input {
   z-index: 5;
 }
 
+.bk-sortable-th {
+  cursor: pointer;
+  user-select: none;
+}
+.bk-sortable-th:hover {
+  background: var(--charcoal);
+}
+
+.bk-chart-scroll {
+  overflow-x: auto;
+  margin-bottom: 12px;
+}
+.bk-chart-label {
+  font-family: var(--font-body);
+  font-size: 11px;
+  fill: var(--charcoal);
+}
+
 /* Inventory's table also needs horizontal scroll (many columns), and a
    sticky thead inside a plain overflow-x:auto wrapper renders with visual
    gaps/tearing on scroll (the wrapper becomes its own ambiguous scroll

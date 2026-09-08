@@ -6,6 +6,9 @@ import { loadInvoices, deleteInvoice, getInvoiceSignedUrl } from "@/lib/db";
 import { fmtMoney, fmtDate } from "@/lib/costing";
 import { SectionHead, EmptyState } from "./ui";
 import InvoiceModal from "./InvoiceModal";
+import InvoiceMonthlyChart from "./InvoiceMonthlyChart";
+
+const SORT_DEFAULT_DIR = { vendor: "asc", file: "asc", notes: "asc", date: "desc", total: "desc" };
 
 export default function InvoicesTab({ vendors }) {
   const { isAdmin } = useAuth();
@@ -16,6 +19,17 @@ export default function InvoicesTab({ vendors }) {
   const [editing, setEditing] = useState(null);
   const [addingNew, setAddingNew] = useState(false);
   const [openingId, setOpeningId] = useState(null);
+  const [sortKey, setSortKey] = useState("date");
+  const [sortDir, setSortDir] = useState("desc");
+
+  function toggleSort(key) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir(SORT_DEFAULT_DIR[key] || "asc");
+    }
+  }
 
   useEffect(() => {
     (async () => {
@@ -69,17 +83,58 @@ export default function InvoicesTab({ vendors }) {
   if (error) return <p className="bk-error-text">{error}</p>;
   if (!invoices) return <div className="bk-loading">Fetching the bowl of data…</div>;
 
-  const filtered = invoices.filter((inv) => {
-    if (vendorFilter && inv.vendor_id !== vendorFilter) return false;
-    if (!search.trim()) return true;
-    const q = search.trim().toLowerCase();
-    const vendorName = vendors.find((v) => v.id === inv.vendor_id)?.name || "";
-    return (
-      (inv.file_name || "").toLowerCase().includes(q) ||
-      (inv.notes || "").toLowerCase().includes(q) ||
-      vendorName.toLowerCase().includes(q)
-    );
+  const filtered = invoices
+    .filter((inv) => {
+      if (vendorFilter && inv.vendor_id !== vendorFilter) return false;
+      if (!search.trim()) return true;
+      const q = search.trim().toLowerCase();
+      const vendorName = vendors.find((v) => v.id === inv.vendor_id)?.name || "";
+      return (
+        (inv.file_name || "").toLowerCase().includes(q) ||
+        (inv.notes || "").toLowerCase().includes(q) ||
+        vendorName.toLowerCase().includes(q)
+      );
+    })
+    .map((inv) => ({ inv, vendorName: vendors.find((v) => v.id === inv.vendor_id)?.name || "" }));
+
+  const sorted = [...filtered].sort((a, b) => {
+    let av, bv;
+    switch (sortKey) {
+      case "vendor":
+        av = a.vendorName.toLowerCase();
+        bv = b.vendorName.toLowerCase();
+        break;
+      case "total":
+        av = a.inv.total_amount == null ? -Infinity : Number(a.inv.total_amount);
+        bv = b.inv.total_amount == null ? -Infinity : Number(b.inv.total_amount);
+        break;
+      case "file":
+        av = (a.inv.file_name || "").toLowerCase();
+        bv = (b.inv.file_name || "").toLowerCase();
+        break;
+      case "notes":
+        av = (a.inv.notes || "").toLowerCase();
+        bv = (b.inv.notes || "").toLowerCase();
+        break;
+      case "date":
+      default:
+        av = a.inv.invoice_date || "";
+        bv = b.inv.invoice_date || "";
+        break;
+    }
+    if (av < bv) return sortDir === "asc" ? -1 : 1;
+    if (av > bv) return sortDir === "asc" ? 1 : -1;
+    return 0;
   });
+
+  function sortTh(label, sortKeyName) {
+    const active = sortKey === sortKeyName;
+    return (
+      <th className="bk-sortable-th" onClick={() => toggleSort(sortKeyName)}>
+        {label}{active ? (sortDir === "asc" ? " ▲" : " ▼") : ""}
+      </th>
+    );
+  }
 
   return (
     <div>
@@ -88,6 +143,7 @@ export default function InvoicesTab({ vendors }) {
         desc="A running archive of invoices — reference pricing and order frequency any time."
         action={<button className="bk-btn-primary" onClick={() => setAddingNew(true)}>+ Upload invoice</button>}
       />
+      <InvoiceMonthlyChart invoices={filtered.map((f) => f.inv)} />
       <div className="bk-toolbar">
         <input className="bk-input" placeholder="Search invoices…" value={search} onChange={(e) => setSearch(e.target.value)} />
         <select className="bk-input" value={vendorFilter} onChange={(e) => setVendorFilter(e.target.value)}>
@@ -97,34 +153,38 @@ export default function InvoicesTab({ vendors }) {
           ))}
         </select>
       </div>
-      {filtered.length === 0 ? (
+      {sorted.length === 0 ? (
         <EmptyState text="No invoices yet." sub="Upload one to start building the archive." />
       ) : (
         <table className="bk-table bk-table-sticky-head">
           <thead>
-            <tr><th>Date</th><th>Vendor</th><th>Total</th><th>File</th><th>Notes</th><th></th></tr>
+            <tr>
+              {sortTh("Date", "date")}
+              {sortTh("Vendor", "vendor")}
+              {sortTh("Total", "total")}
+              {sortTh("File", "file")}
+              {sortTh("Notes", "notes")}
+              <th></th>
+            </tr>
           </thead>
           <tbody>
-            {filtered.map((inv) => {
-              const vendorName = vendors.find((v) => v.id === inv.vendor_id)?.name;
-              return (
-                <tr key={inv.id}>
-                  <td>{fmtDate(inv.invoice_date)}</td>
-                  <td>{vendorName || "—"}</td>
-                  <td>{inv.total_amount == null ? "—" : fmtMoney(inv.total_amount)}</td>
-                  <td>
-                    <button className="bk-link" disabled={openingId === inv.id} onClick={() => handleView(inv)}>
-                      {openingId === inv.id ? "Opening…" : inv.file_name || "View"}
-                    </button>
-                  </td>
-                  <td>{inv.notes || "—"}</td>
-                  <td className="bk-row-actions">
-                    <button className="bk-link" onClick={() => setEditing(inv)}>Edit</button>
-                    {isAdmin && <button className="bk-link bk-link-danger" onClick={() => handleDelete(inv)}>Delete</button>}
-                  </td>
-                </tr>
-              );
-            })}
+            {sorted.map(({ inv, vendorName }) => (
+              <tr key={inv.id}>
+                <td>{fmtDate(inv.invoice_date)}</td>
+                <td>{vendorName || "—"}</td>
+                <td>{inv.total_amount == null ? "—" : fmtMoney(inv.total_amount)}</td>
+                <td>
+                  <button className="bk-link" disabled={openingId === inv.id} onClick={() => handleView(inv)}>
+                    {openingId === inv.id ? "Opening…" : inv.file_name || "View"}
+                  </button>
+                </td>
+                <td>{inv.notes || "—"}</td>
+                <td className="bk-row-actions">
+                  <button className="bk-link" onClick={() => setEditing(inv)}>Edit</button>
+                  {isAdmin && <button className="bk-link bk-link-danger" onClick={() => handleDelete(inv)}>Delete</button>}
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       )}
