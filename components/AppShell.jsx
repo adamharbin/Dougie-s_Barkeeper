@@ -11,9 +11,10 @@ import InventoryTab from "./InventoryTab";
 import RecipesTab from "./RecipesTab";
 import VendorsTab from "./VendorsTab";
 import InvoicesTab from "./InvoicesTab";
+import WasteLogTab from "./WasteLogTab";
 import SettingsTab from "./SettingsTab";
 
-const TAB_IDS = ["dashboard", "inventory", "recipes", "vendors", "invoices", "settings"];
+const TAB_IDS = ["dashboard", "inventory", "recipes", "vendors", "invoices", "waste", "settings"];
 
 export default function AppShell() {
   const { user } = useAuth();
@@ -103,6 +104,8 @@ export default function AppShell() {
           <VendorsTab vendors={data.vendors} onSaved={refresh} />
         ) : tab === "invoices" ? (
           <InvoicesTab vendors={data.vendors} />
+        ) : tab === "waste" ? (
+          <WasteLogTab items={data.items} prices={data.prices} />
         ) : (
           <SettingsTab settings={data.settings} onSaved={refresh} />
         )}

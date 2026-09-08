@@ -205,6 +205,21 @@ create table inventory_count_lines (
   created_at timestamptz default now()
 );
 
+-- Waste log: one row per waste event. quantity is expressed in the item's
+-- own recipe_unit (same convention as recipe_ingredients.quantity) — no
+-- cost is snapshotted here, the app prices it live off the item's current
+-- weighted-avg cost, since this is a tracking log, not a financial ledger.
+create table waste_log (
+  id uuid primary key default gen_random_uuid(),
+  item_id uuid references inventory_items(id) on delete set null,
+  waste_date date default current_date,
+  category text default 'Other' check (category in ('Spoilage/Expired', 'Over-prep', 'Breakage/Spill', 'Comp/Mistake', 'Other')),
+  reason text default '',
+  quantity numeric not null,
+  logged_by uuid references profiles(id),
+  created_at timestamptz default now()
+);
+
 -- ---------------------------------------------------------------------------
 -- RLS — matches the permission matrix in Build Prompt v4 exactly
 -- ---------------------------------------------------------------------------
@@ -221,6 +236,7 @@ alter table goal_settings enable row level security;
 alter table uploads enable row level security;
 alter table inventory_counts enable row level security;
 alter table inventory_count_lines enable row level security;
+alter table waste_log enable row level security;
 
 -- profiles: everyone can read their own row; admins can read/update everyone
 -- (foundation for a future "manage users" screen — not built yet).
@@ -294,6 +310,13 @@ create policy "counts insert" on inventory_counts for insert with check (auth.ui
 
 create policy "count_lines select" on inventory_count_lines for select using (auth.uid() is not null);
 create policy "count_lines insert" on inventory_count_lines for insert with check (auth.uid() is not null);
+
+-- waste_log: view + insert = any signed-in user (matches the invoices/
+-- prices level). Edit/delete = admin only, same conservative default.
+create policy "waste_log select" on waste_log for select using (auth.uid() is not null);
+create policy "waste_log insert" on waste_log for insert with check (auth.uid() is not null);
+create policy "waste_log update" on waste_log for update using (public.is_admin());
+create policy "waste_log delete" on waste_log for delete using (public.is_admin());
 
 -- ---------------------------------------------------------------------------
 -- Storage — recipe step photos (public bucket: anyone with the URL can view

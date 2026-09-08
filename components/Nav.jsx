@@ -9,6 +9,7 @@ export const TABS = [
   { id: "recipes", label: "Recipes" },
   { id: "vendors", label: "Vendors" },
   { id: "invoices", label: "Invoices" },
+  { id: "waste", label: "Waste log" },
   { id: "settings", label: "Settings" },
 ];
 
