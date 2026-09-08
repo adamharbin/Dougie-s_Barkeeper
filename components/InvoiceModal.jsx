@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { insertInvoice, updateInvoice, uploadInvoiceFile } from "@/lib/db";
 import { Modal, Field } from "./ui";
 
@@ -15,11 +15,23 @@ function blankForm(invoice) {
 
 export default function InvoiceModal({ invoice, vendors, onClose, onSaved }) {
   const isNew = !invoice?.id;
+  const fileInputRef = useRef(null);
   const [form, setForm] = useState(blankForm(invoice));
   const [file, setFile] = useState(null);
+  const [dragOver, setDragOver] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+
+  function handleFiles(fileList) {
+    const f = fileList && fileList[0];
+    if (f) setFile(f);
+  }
+  function onDrop(e) {
+    e.preventDefault();
+    setDragOver(false);
+    handleFiles(e.dataTransfer.files);
+  }
 
   async function save() {
     if (isNew && !file) {
@@ -48,12 +60,32 @@ export default function InvoiceModal({ invoice, vendors, onClose, onSaved }) {
     <Modal title={isNew ? "Upload invoice" : `Edit invoice — ${invoice.file_name || "file"}`} onClose={onClose}>
       {isNew && (
         <Field label="File (PDF or photo)">
-          <input
-            className="bk-input"
-            type="file"
-            accept="application/pdf,image/*"
-            onChange={(e) => setFile(e.target.files?.[0] || null)}
-          />
+          <div
+            className={`bk-dropzone ${dragOver ? "bk-dropzone-active" : ""}`}
+            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={onDrop}
+            onClick={() => fileInputRef.current && fileInputRef.current.click()}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="application/pdf,image/*"
+              style={{ display: "none" }}
+              onChange={(e) => handleFiles(e.target.files)}
+            />
+            {file ? (
+              <div className="bk-dropzone-file">
+                📎 {file.name}
+                <button className="bk-link" onClick={(e) => { e.stopPropagation(); setFile(null); }}>Remove</button>
+              </div>
+            ) : (
+              <>
+                <div className="bk-dropzone-title">Drag & drop a photo or PDF here</div>
+                <div className="bk-dropzone-sub">or click to browse</div>
+              </>
+            )}
+          </div>
         </Field>
       )}
       <Field label="Vendor">
