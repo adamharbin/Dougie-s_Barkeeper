@@ -531,6 +531,12 @@ textarea.bk-input {
   font-size: 11px;
   fill: var(--charcoal);
 }
+.bk-chart-tooltip {
+  font-family: var(--font-head);
+  font-size: 12px;
+  font-weight: 600;
+  fill: var(--teal);
+}
 
 /* Inventory's table also needs horizontal scroll (many columns), and a
    sticky thead inside a plain overflow-x:auto wrapper renders with visual

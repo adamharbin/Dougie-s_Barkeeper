@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { fmtMoney } from "@/lib/costing";
 
 function monthKey(dateStr) {
@@ -12,6 +13,8 @@ function monthLabel(key) {
 }
 
 export default function InvoiceMonthlyChart({ invoices }) {
+  const [hoverKey, setHoverKey] = useState(null);
+
   const byMonth = new Map();
   invoices.forEach((inv) => {
     if (inv.total_amount == null) return;
@@ -29,10 +32,12 @@ export default function InvoiceMonthlyChart({ invoices }) {
   const rows = months.map((key) => ({ key, label: monthLabel(key), ...byMonth.get(key) }));
   const maxTotal = Math.max(...rows.map((r) => r.total), 0);
 
-  const chartHeight = 160;
+  const topPadding = 22;
+  const plotHeight = 160;
   const barWidth = 36;
   const gap = 18;
   const chartWidth = rows.length * (barWidth + gap) + gap;
+  const chartHeight = topPadding + plotHeight + 30;
 
   return (
     <div className="bk-card">
@@ -40,16 +45,28 @@ export default function InvoiceMonthlyChart({ invoices }) {
         <h4>Invoice amount by month</h4>
       </div>
       <div className="bk-chart-scroll">
-        <svg width={chartWidth} height={chartHeight + 30} viewBox={`0 0 ${chartWidth} ${chartHeight + 30}`}>
+        <svg width={chartWidth} height={chartHeight} viewBox={`0 0 ${chartWidth} ${chartHeight}`}>
           {rows.map((r, i) => {
-            const barHeight = maxTotal > 0 ? (r.total / maxTotal) * chartHeight : 0;
+            const barHeight = maxTotal > 0 ? (r.total / maxTotal) * plotHeight : 0;
             const x = gap + i * (barWidth + gap);
-            const y = chartHeight - barHeight;
+            const y = topPadding + (plotHeight - barHeight);
+            const hovered = hoverKey === r.key;
             return (
-              <g key={r.key}>
-                <title>{`${r.label}: ${fmtMoney(r.total)} across ${r.count} invoice${r.count === 1 ? "" : "s"}`}</title>
-                <rect x={x} y={y} width={barWidth} height={Math.max(barHeight, 1)} rx={3} style={{ fill: "var(--teal)" }} />
-                <text x={x + barWidth / 2} y={chartHeight + 16} textAnchor="middle" className="bk-chart-label">
+              <g
+                key={r.key}
+                onMouseEnter={() => setHoverKey(r.key)}
+                onMouseLeave={() => setHoverKey(null)}
+                style={{ cursor: "pointer" }}
+              >
+                {/* Full-column hit area so short bars are still easy to hover */}
+                <rect x={x} y={topPadding} width={barWidth} height={plotHeight} fill="transparent" />
+                <rect x={x} y={y} width={barWidth} height={Math.max(barHeight, 1)} rx={3} style={{ fill: hovered ? "var(--orange)" : "var(--teal)" }} />
+                {hovered && (
+                  <text x={x + barWidth / 2} y={Math.max(y - 6, 14)} textAnchor="middle" className="bk-chart-tooltip">
+                    {fmtMoney(r.total)}
+                  </text>
+                )}
+                <text x={x + barWidth / 2} y={topPadding + plotHeight + 16} textAnchor="middle" className="bk-chart-label">
                   {r.label}
                 </text>
               </g>
