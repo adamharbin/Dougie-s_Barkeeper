@@ -169,7 +169,7 @@ export default function WasteLogTab({ items, prices }) {
                 <td>{e.quantity} {item?.recipe_unit || ""}</td>
                 <td>{e.reason || "—"}</td>
                 <td>{cost == null ? "—" : fmtMoney(cost)}</td>
-                <td className="bk-row-actions">
+                <td className="bk-row-menu-cell">
                   <RowMenu
                     items={[
                       { label: "Edit", onClick: () => setEditing(e) },

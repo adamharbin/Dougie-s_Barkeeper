@@ -135,7 +135,7 @@ export default function InventoryRow({ item, items, prices, vendors, isAdmin, on
       <td><StockTag status={stock.status} label={stock.label} /></td>
       <td>{lastPurchase ? fmtDate(lastPurchase.purchase_date) : "—"}</td>
       <td>{lastVendorName || "—"}</td>
-      <td className="bk-row-actions">
+      <td className="bk-row-menu-cell">
         <RowMenu
           items={[
             { label: "Edit", onClick: () => onOpenEdit(item) },

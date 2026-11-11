@@ -45,7 +45,7 @@ export default function VendorsTab({ vendors, onSaved }) {
                 <td>{v.order_deadline || "—"}</td>
                 <td>{v.delivery_days || "—"}</td>
                 <td>{v.supplies_notes || "—"}</td>
-                <td className="bk-row-actions">
+                <td className="bk-row-menu-cell">
                   <RowMenu
                     items={[
                       { label: "Edit", onClick: () => setEditing(v) },

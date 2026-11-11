@@ -180,7 +180,7 @@ export default function InvoicesTab({ vendors }) {
                   </button>
                 </td>
                 <td>{inv.notes || "—"}</td>
-                <td className="bk-row-actions">
+                <td className="bk-row-menu-cell">
                   <RowMenu
                     items={[
                       { label: "Open file", onClick: () => handleView(inv) },

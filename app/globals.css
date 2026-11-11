@@ -589,7 +589,12 @@ textarea.bk-input {
   display: flex;
   gap: 8px;
   white-space: nowrap;
-  justify-content: flex-end;
+}
+
+.bk-row-menu-cell {
+  text-align: right;
+  white-space: nowrap;
+  width: 1%;
 }
 
 /* "⋯" row menu (Inventory, Recipes, Vendors, Invoices, Waste log) */

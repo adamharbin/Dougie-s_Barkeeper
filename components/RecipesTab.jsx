@@ -99,7 +99,7 @@ export default function RecipesTab({ recipes, items, prices, settings, onSaved }
                     <td className={healthClass(m.foodCostPct, target)}>{fmtPct(m.foodCostPct)}</td>
                     <td>{fmtMoney(m.prime)}</td>
                     <td className={healthClass(m.primeCostPct, goals.target_prime_cost_pct)}>{fmtPct(m.primeCostPct)}</td>
-                    <td className="bk-row-actions">
+                    <td className="bk-row-menu-cell">
                       <RowMenu
                         items={[
                           { label: isAdmin ? "View / Edit" : "View", onClick: () => router.push(`/recipes/${r.id}`) },
