@@ -84,7 +84,7 @@ export default function RecipeModal({ items, prices, settings, onClose, onSaved 
   }
 
   const laborRate = form.category_tag === "Food" ? settings.labor_rates?.food_hourly_rate : settings.labor_rates?.bar_hourly_rate;
-  const itemOptions = [...items].sort((a, b) => a.name.localeCompare(b.name)).map((i) => ({ value: i.id, label: i.name }));
+  const itemOptions = items.filter((i) => !i.archived_at).sort((a, b) => a.name.localeCompare(b.name)).map((i) => ({ value: i.id, label: i.name }));
 
   return (
     <Modal title="Add recipe" onClose={onClose} wide>

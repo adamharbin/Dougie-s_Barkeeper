@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useAuth } from "@/lib/useAuth";
-import { deleteItem } from "@/lib/db";
+import { deleteItem, setItemArchived } from "@/lib/db";
 import { downloadCSV } from "@/lib/csv";
 import { weightedAvgCost, latestPriceEntry, onHandValue, stockLevelStatus, formatPurchaseUnitLabel, fmtMoney, MENU_CATEGORIES } from "@/lib/costing";
 import { SectionHead, EmptyState } from "./ui";
@@ -15,11 +15,12 @@ import InventoryRow from "./InventoryRow";
 // Sort order for "Stock level" — most urgent first, unknowns last.
 const STOCK_SORT_RANK = { critical: 0, low: 1, stocked: 2, no_par: 3, not_counted: 4 };
 
-export default function InventoryTab({ items, prices, vendors, onSaved }) {
+export default function InventoryTab({ items, prices, vendors, recipes, onSaved }) {
   const { isAdmin } = useAuth();
   const [view, setView] = useState("items"); // items | counts
   const [search, setSearch] = useState("");
   const [tagFilter, setTagFilter] = useState("All");
+  const [statusFilter, setStatusFilter] = useState("active"); // active | archived | all
   const [menuCategoryFilter, setMenuCategoryFilter] = useState("All");
   const [sortKey, setSortKey] = useState("name");
   const [editing, setEditing] = useState(null);
@@ -28,7 +29,8 @@ export default function InventoryTab({ items, prices, vendors, onSaved }) {
   const [countOpen, setCountOpen] = useState(false);
 
   const filtered = useMemo(() => {
-    let list = items.filter((i) => (tagFilter === "All" ? true : i.category_tag === tagFilter));
+    let list = items.filter((i) => (statusFilter === "all" ? true : statusFilter === "archived" ? !!i.archived_at : !i.archived_at));
+    list = list.filter((i) => (tagFilter === "All" ? true : i.category_tag === tagFilter));
     if (menuCategoryFilter !== "All") {
       list = list.filter((i) => (menuCategoryFilter === "Uncategorized" ? !i.menu_category : i.menu_category === menuCategoryFilter));
     }
@@ -56,24 +58,38 @@ export default function InventoryTab({ items, prices, vendors, onSaved }) {
       return 0;
     });
     return withCalc;
-  }, [items, prices, vendors, search, tagFilter, menuCategoryFilter, sortKey]);
+  }, [items, prices, vendors, search, tagFilter, statusFilter, menuCategoryFilter, sortKey]);
 
-  const totalOnHandValue = filtered.reduce((s, i) => s + (i._onHandValue || 0), 0);
-  const missingCount = filtered.filter((i) => i._onHandValue == null).length;
+  // Archived items never count toward inventory totals.
+  const counted = filtered.filter((i) => !i.archived_at);
+  const totalOnHandValue = counted.reduce((s, i) => s + (i._onHandValue || 0), 0);
+  const missingCount = counted.filter((i) => i._onHandValue == null).length;
 
-  async function handleDelete(id) {
-    if (!isAdmin) return;
-    if (!confirm("Delete this inventory item? Purchase history will be deleted with it.")) return;
+  async function handleArchive(item) {
+    const archiving = !item.archived_at;
+    if (archiving && !confirm(`Archive "${item.name}"? It will be hidden from inventory counts, low-stock alerts, and new recipe/waste pickers. Existing recipes keep using it. You can restore it any time from the Archived view.`)) return;
     try {
-      await deleteItem(id);
+      await setItemArchived(item.id, archiving);
       await onSaved();
     } catch (e) {
-      if (e.code === "23503") {
-        alert("Can't delete this item — it's still used in a recipe or a saved inventory count. Remove it from those first, then delete it.");
-      } else {
-        console.error(e);
-        alert("Couldn't delete that item — check your connection and try again.");
-      }
+      console.error(e);
+      alert(`Couldn't ${archiving ? "archive" : "restore"} that item — check your connection and try again.`);
+    }
+  }
+
+  async function handleDelete(item) {
+    if (!isAdmin) return;
+    const usedIn = (recipes || []).filter((r) => (r.ingredients || []).some((ing) => ing.item_id === item.id));
+    const recipeWarning = usedIn.length
+      ? `\n\n"${item.name}" is used in ${usedIn.length} recipe${usedIn.length === 1 ? "" : "s"} (${usedIn.slice(0, 5).map((r) => r.name).join(", ")}${usedIn.length > 5 ? ", …" : ""}). Deleting it removes it from those recipes, which will change their cost. Archive it instead to keep the recipes as they are.`
+      : "";
+    if (!confirm(`Permanently delete "${item.name}"? Its purchase history will be deleted with it.${recipeWarning}`)) return;
+    try {
+      await deleteItem(item.id);
+      await onSaved();
+    } catch (e) {
+      console.error(e);
+      alert("Couldn't delete that item — check your connection and try again. (If this keeps happening, the latest database update hasn't been applied yet.)");
     }
   }
 
@@ -111,6 +127,11 @@ export default function InventoryTab({ items, prices, vendors, onSaved }) {
         <>
           <div className="bk-toolbar">
             <input className="bk-input" placeholder="Search inventory…" value={search} onChange={(e) => setSearch(e.target.value)} />
+            <select className="bk-input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+              <option value="active">Active items</option>
+              <option value="archived">Archived items</option>
+              <option value="all">Active + archived</option>
+            </select>
             <select className="bk-input" value={tagFilter} onChange={(e) => setTagFilter(e.target.value)}>
               <option>All</option><option>Food</option><option>Bar</option><option>Shared</option><option>Supplies</option><option>Packaging</option>
             </select>
@@ -128,13 +149,13 @@ export default function InventoryTab({ items, prices, vendors, onSaved }) {
           </div>
 
           {filtered.length === 0 ? (
-            <EmptyState text="No inventory yet — let's dig some up." sub="Add an item or upload an invoice to get started." />
+            <EmptyState text={statusFilter === "archived" ? "No archived items." : "No inventory yet — let's dig some up."} sub={statusFilter === "archived" ? "Use the ⋯ menu on an item to archive it." : "Add an item or upload an invoice to get started."} />
           ) : (
             <>
               <p className="bk-disclaimer" style={{ marginTop: 0 }}>
                 Name, tag, recipe unit, par level, and shelf life save as you edit them. A new on-hand count writes a
                 real entry, same as the full Count screen. Purchase-unit details and logging/editing purchase history
-                are set via Edit.
+                are set via Edit. Use the ⋯ menu on a row to edit, archive, or delete an item — archived items stay out of counts and totals.
               </p>
               <div className="bk-table-scroll-box">
                 <table className="bk-table">
@@ -156,6 +177,7 @@ export default function InventoryTab({ items, prices, vendors, onSaved }) {
                         isAdmin={isAdmin}
                         onSaved={onSaved}
                         onOpenEdit={setEditing}
+                        onArchive={handleArchive}
                         onDelete={handleDelete}
                       />
                     ))}
@@ -163,7 +185,7 @@ export default function InventoryTab({ items, prices, vendors, onSaved }) {
                 </table>
               </div>
               <div className="bk-drawer-summary" style={{ marginTop: 10 }}>
-                Inventory on hand ({filtered.length} item{filtered.length === 1 ? "" : "s"}): <strong>{fmtMoney(totalOnHandValue)}</strong>
+                Inventory on hand ({counted.length} item{counted.length === 1 ? "" : "s"}): <strong>{fmtMoney(totalOnHandValue)}</strong>
                 {missingCount > 0 && ` · ${missingCount} not yet counted or priced, excluded from this total`}
               </div>
             </>

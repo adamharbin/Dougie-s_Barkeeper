@@ -57,8 +57,9 @@ export default function AppShell() {
 
   const attention = useMemo(() => {
     if (!data) return { stale: [], expiring: [] };
-    const stale = data.items.filter((i) => isStalePrice(i.id, data.prices));
-    const expiring = data.items
+    const activeItems = data.items.filter((i) => !i.archived_at);
+    const stale = activeItems.filter((i) => isStalePrice(i.id, data.prices));
+    const expiring = activeItems
       .map((i) => ({ item: i, exp: estimatedExpiration(i, data.prices) }))
       .filter((x) => x.exp && daysUntil(x.exp) <= 3 && daysUntil(x.exp) >= 0);
     return { stale, expiring };
@@ -69,6 +70,7 @@ export default function AppShell() {
   const lowStock = useMemo(() => {
     if (!data) return [];
     return data.items
+      .filter((item) => !item.archived_at)
       .map((item) => ({ item, ...stockLevelStatus(item) }))
       .filter((x) => x.status === "critical" || x.status === "low")
       .sort((a, b) => (a.status === b.status ? 0 : a.status === "critical" ? -1 : 1));
@@ -97,7 +99,7 @@ export default function AppShell() {
             onGo={setTab}
           />
         ) : tab === "inventory" ? (
-          <InventoryTab items={data.items} prices={data.prices} vendors={data.vendors} onSaved={refresh} />
+          <InventoryTab items={data.items} prices={data.prices} vendors={data.vendors} recipes={data.recipes} onSaved={refresh} />
         ) : tab === "recipes" ? (
           <RecipesTab recipes={data.recipes} items={data.items} prices={data.prices} settings={data.settings} onSaved={refresh} />
         ) : tab === "vendors" ? (

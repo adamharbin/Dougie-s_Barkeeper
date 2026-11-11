@@ -6,6 +6,7 @@ import { loadWasteLog, deleteWasteEntry } from "@/lib/db";
 import { fmtMoney, fmtDate, weightedAvgCost } from "@/lib/costing";
 import { SectionHead, EmptyState } from "./ui";
 import WasteLogModal from "./WasteLogModal";
+import RowMenu from "./RowMenu";
 
 const CATEGORIES = ["Spoilage/Expired", "Over-prep", "Breakage/Spill", "Comp/Mistake", "Other"];
 const SORT_DEFAULT_DIR = { item: "asc", category: "asc", reason: "asc", date: "desc", quantity: "desc", cost: "desc" };
@@ -169,8 +170,12 @@ export default function WasteLogTab({ items, prices }) {
                 <td>{e.reason || "—"}</td>
                 <td>{cost == null ? "—" : fmtMoney(cost)}</td>
                 <td className="bk-row-actions">
-                  <button className="bk-link" onClick={() => setEditing(e)}>Edit</button>
-                  {isAdmin && <button className="bk-link bk-link-danger" onClick={() => handleDelete(e)}>Delete</button>}
+                  <RowMenu
+                    items={[
+                      { label: "Edit", onClick: () => setEditing(e) },
+                      { label: "Delete", danger: true, hidden: !isAdmin, onClick: () => handleDelete(e) },
+                    ]}
+                  />
                 </td>
               </tr>
             ))}

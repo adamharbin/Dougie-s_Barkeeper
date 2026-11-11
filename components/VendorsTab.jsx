@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/useAuth";
 import { deleteVendor } from "@/lib/db";
 import { SectionHead, EmptyState } from "./ui";
 import VendorModal from "./VendorModal";
+import RowMenu from "./RowMenu";
 
 export default function VendorsTab({ vendors, onSaved }) {
   const { isAdmin } = useAuth();
@@ -45,8 +46,12 @@ export default function VendorsTab({ vendors, onSaved }) {
                 <td>{v.delivery_days || "—"}</td>
                 <td>{v.supplies_notes || "—"}</td>
                 <td className="bk-row-actions">
-                  <button className="bk-link" onClick={() => setEditing(v)}>Edit</button>
-                  {isAdmin && <button className="bk-link bk-link-danger" onClick={() => handleDelete(v.id)}>Delete</button>}
+                  <RowMenu
+                    items={[
+                      { label: "Edit", onClick: () => setEditing(v) },
+                      { label: "Delete", danger: true, hidden: !isAdmin, onClick: () => handleDelete(v.id) },
+                    ]}
+                  />
                 </td>
               </tr>
             ))}

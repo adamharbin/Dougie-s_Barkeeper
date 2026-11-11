@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
+import RowMenu from "./RowMenu";
 import { useAuth } from "@/lib/useAuth";
 import { deleteRecipe } from "@/lib/db";
 import { recipeMetrics, healthClass, fmtMoney, fmtPct, DEFAULT_GOALS, MENU_CATEGORIES } from "@/lib/costing";
@@ -11,6 +12,7 @@ import UploadRecipeModal from "./UploadRecipeModal";
 
 export default function RecipesTab({ recipes, items, prices, settings, onSaved }) {
   const { isAdmin } = useAuth();
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [tagFilter, setTagFilter] = useState("All");
   const [menuCategoryFilter, setMenuCategoryFilter] = useState("All");
@@ -98,10 +100,12 @@ export default function RecipesTab({ recipes, items, prices, settings, onSaved }
                     <td>{fmtMoney(m.prime)}</td>
                     <td className={healthClass(m.primeCostPct, goals.target_prime_cost_pct)}>{fmtPct(m.primeCostPct)}</td>
                     <td className="bk-row-actions">
-                      <Link href={`/recipes/${r.id}`} className="bk-btn-primary bk-btn-compact">
-                        {isAdmin ? "View/Edit" : "View"}
-                      </Link>
-                      {isAdmin && <button className="bk-link bk-link-danger" onClick={() => handleDelete(r.id)}>Delete</button>}
+                      <RowMenu
+                        items={[
+                          { label: isAdmin ? "View / Edit" : "View", onClick: () => router.push(`/recipes/${r.id}`) },
+                          { label: "Delete", danger: true, hidden: !isAdmin, onClick: () => handleDelete(r.id) },
+                        ]}
+                      />
                     </td>
                   </tr>
                 );

@@ -80,6 +80,7 @@ create table inventory_items (
   size_uom text, -- unit size_per_inner is measured in (usually = recipe_unit, not required to be)
   manual_factor numeric, -- fallback recipe_unit-per-size_uom factor when size_uom/recipe_unit don't auto-convert
   menu_category text, -- e.g. "On Draft", "Flatbreads", "Supplies" — see lib/costing.js MENU_CATEGORIES
+  archived_at timestamptz, -- null = active. Archived items are hidden from the inventory list, counts, low-stock alerts, and ingredient/waste pickers, but stay in existing recipes so costs don't change.
   created_at timestamptz default now()
 );
 
@@ -119,7 +120,7 @@ create table recipes (
 create table recipe_ingredients (
   id uuid primary key default gen_random_uuid(),
   recipe_id uuid references recipes(id) on delete cascade,
-  item_id uuid references inventory_items(id),
+  item_id uuid references inventory_items(id) on delete cascade, -- deleting an item removes it from recipes
   quantity numeric,
   unit text,
   created_at timestamptz default now()
@@ -198,7 +199,7 @@ create table inventory_counts (
 create table inventory_count_lines (
   id uuid primary key default gen_random_uuid(),
   count_id uuid references inventory_counts(id) on delete cascade,
-  item_id uuid references inventory_items(id),
+  item_id uuid references inventory_items(id) on delete set null, -- history line survives with its snapshotted cost/value
   quantity numeric not null,
   unit_cost numeric,
   line_value numeric,

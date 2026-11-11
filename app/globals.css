@@ -589,6 +589,75 @@ textarea.bk-input {
   display: flex;
   gap: 8px;
   white-space: nowrap;
+  justify-content: flex-end;
+}
+
+/* "⋯" row menu (Inventory, Recipes, Vendors, Invoices, Waste log) */
+.bk-row-menu {
+  position: relative;
+  display: inline-block;
+}
+.bk-row-menu-btn {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  width: 32px;
+  height: 28px;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--charcoal);
+}
+.bk-row-menu-btn:hover,
+.bk-row-menu-btn.open {
+  background: var(--cream);
+  border-color: #d8cdb5;
+}
+.bk-row-menu-list {
+  position: fixed;
+  z-index: 60;
+  min-width: 140px;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border: 1px solid #d8cdb5;
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+  padding: 4px;
+}
+.bk-row-menu-item {
+  text-align: left;
+  background: none;
+  border: 0;
+  border-radius: 5px;
+  padding: 7px 10px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--charcoal);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.bk-row-menu-item:hover {
+  background: var(--cream);
+}
+.bk-row-menu-item.danger {
+  color: var(--orange);
+}
+
+/* Inventory: on-hand counts read as real numbers, not form hints */
+.bk-onhand-input {
+  font-weight: 700;
+}
+.bk-onhand-input::placeholder {
+  font-weight: 400;
+}
+.bk-onhand-input.counted::placeholder {
+  font-weight: 700;
+  color: var(--charcoal);
+  opacity: 1;
+}
+tr.bk-row-archived td {
+  opacity: 0.6;
 }
 
 /* ---------------- Pills / buttons ---------------- */

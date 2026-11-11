@@ -7,6 +7,7 @@ import { fmtMoney, fmtDate } from "@/lib/costing";
 import { SectionHead, EmptyState } from "./ui";
 import InvoiceModal from "./InvoiceModal";
 import InvoiceMonthlyChart from "./InvoiceMonthlyChart";
+import RowMenu from "./RowMenu";
 
 const SORT_DEFAULT_DIR = { vendor: "asc", file: "asc", notes: "asc", date: "desc", total: "desc" };
 
@@ -180,8 +181,13 @@ export default function InvoicesTab({ vendors }) {
                 </td>
                 <td>{inv.notes || "—"}</td>
                 <td className="bk-row-actions">
-                  <button className="bk-link" onClick={() => setEditing(inv)}>Edit</button>
-                  {isAdmin && <button className="bk-link bk-link-danger" onClick={() => handleDelete(inv)}>Delete</button>}
+                  <RowMenu
+                    items={[
+                      { label: "Open file", onClick: () => handleView(inv) },
+                      { label: "Edit", onClick: () => setEditing(inv) },
+                      { label: "Delete", danger: true, hidden: !isAdmin, onClick: () => handleDelete(inv) },
+                    ]}
+                  />
                 </td>
               </tr>
             ))}

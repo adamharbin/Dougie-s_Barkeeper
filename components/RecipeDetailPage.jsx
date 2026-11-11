@@ -63,7 +63,7 @@ export default function RecipeDetailPage({ recipeId, recipes, items, prices, set
   const target = recipe.category_tag === "Food" ? goals.target_food_cost_pct : goals.target_bar_cost_pct;
   const m = recipeMetrics(recipe, items, prices, recipes, settings);
   const set = (k, v) => setDraft((d) => ({ ...d, [k]: v }));
-  const itemOptions = [...items].sort((a, b) => a.name.localeCompare(b.name)).map((i) => ({ value: i.id, label: i.name }));
+  const itemOptions = items.filter((i) => !i.archived_at).sort((a, b) => a.name.localeCompare(b.name)).map((i) => ({ value: i.id, label: i.name }));
 
   async function saveField(field, value) {
     setError("");

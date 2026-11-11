@@ -23,7 +23,7 @@ export default function WasteLogModal({ entry, items, onClose, onSaved }) {
   const [error, setError] = useState("");
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
-  const itemOptions = [...items].sort((a, b) => a.name.localeCompare(b.name)).map((i) => ({ value: i.id, label: i.name }));
+  const itemOptions = items.filter((i) => !i.archived_at || i.id === entry?.item_id).sort((a, b) => a.name.localeCompare(b.name)).map((i) => ({ value: i.id, label: i.name }));
   const selectedItem = items.find((i) => i.id === form.item_id);
 
   async function save() {

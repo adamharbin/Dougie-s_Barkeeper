@@ -13,8 +13,9 @@ import {
   todayISO,
 } from "@/lib/costing";
 import { StockTag } from "./ui";
+import RowMenu from "./RowMenu";
 
-export default function InventoryRow({ item, items, prices, vendors, isAdmin, onSaved, onOpenEdit, onDelete }) {
+export default function InventoryRow({ item, items, prices, vendors, isAdmin, onSaved, onOpenEdit, onArchive, onDelete }) {
   const [draft, setDraft] = useState({
     name: item.name,
     category_tag: item.category_tag,
@@ -72,7 +73,7 @@ export default function InventoryRow({ item, items, prices, vendors, isAdmin, on
 
   return (
     <Fragment>
-    <tr>
+    <tr className={item.archived_at ? "bk-row-archived" : undefined}>
       <td>
         <input
           className="bk-input"
@@ -121,7 +122,7 @@ export default function InventoryRow({ item, items, prices, vendors, isAdmin, on
       </td>
       <td>
         <input
-          className="bk-input"
+          className={`bk-input bk-onhand-input ${item.on_hand_qty != null ? "counted" : ""}`}
           type="number"
           style={{ width: 70 }}
           placeholder={item.on_hand_qty != null ? String(item.on_hand_qty) : "not counted"}
@@ -135,8 +136,13 @@ export default function InventoryRow({ item, items, prices, vendors, isAdmin, on
       <td>{lastPurchase ? fmtDate(lastPurchase.purchase_date) : "—"}</td>
       <td>{lastVendorName || "—"}</td>
       <td className="bk-row-actions">
-        <button className="bk-link" onClick={() => onOpenEdit(item)}>Edit</button>
-        {isAdmin && <button className="bk-link bk-link-danger" onClick={() => onDelete(item.id)}>Delete</button>}
+        <RowMenu
+          items={[
+            { label: "Edit", onClick: () => onOpenEdit(item) },
+            { label: item.archived_at ? "Restore" : "Archive", onClick: () => onArchive(item) },
+            { label: "Delete", danger: true, hidden: !isAdmin, onClick: () => onDelete(item) },
+          ]}
+        />
       </td>
     </tr>
     {error && (

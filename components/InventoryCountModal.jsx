@@ -5,7 +5,8 @@ import { saveInventoryCount } from "@/lib/db";
 import { computeInventoryValuation, fmtMoney, todayISO } from "@/lib/costing";
 import { Modal, Pill } from "./ui";
 
-export default function InventoryCountModal({ items, prices, onClose, onSaved }) {
+export default function InventoryCountModal({ items: allItems, prices, onClose, onSaved }) {
+  const items = useMemo(() => allItems.filter((i) => !i.archived_at), [allItems]);
   const [countDate, setCountDate] = useState(todayISO());
   const [counts, setCounts] = useState({}); // item_id -> entered qty string
   const [saving, setSaving] = useState(false);
